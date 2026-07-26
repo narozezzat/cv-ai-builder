@@ -1,0 +1,4 @@
+# Type errors and failing tests belong here rather than in pre-commit: they are
+# too slow to run on every commit, but too important to discover in CI.
+pnpm typecheck
+pnpm test

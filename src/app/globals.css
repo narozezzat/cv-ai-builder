@@ -1,26 +1,439 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* -------------------------------------------------------------------------- */
+/*  Theme contract                                                            */
+/*                                                                            */
+/*  Every token shadcn/ui components reference is mapped here. Add new         */
+/*  design decisions as CSS variables in :root/.dark and expose them through   */
+/*  @theme so they become Tailwind utilities. Never hard-code a hex or oklch   */
+/*  value in a component.                                                     */
+/* -------------------------------------------------------------------------- */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-subtle: var(--brand-subtle);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Layered shadows. Two-stop (tight contact + soft diffuse) reads as
+     physical depth; a single large blur reads as a smudge. */
+  --shadow-xs: 0 1px 2px 0 oklch(0.15 0.02 275 / 0.05);
+  --shadow-sm:
+    0 1px 2px -1px oklch(0.15 0.02 275 / 0.08), 0 2px 6px -1px oklch(0.15 0.02 275 / 0.06);
+  --shadow-md:
+    0 2px 4px -2px oklch(0.15 0.02 275 / 0.08), 0 6px 16px -4px oklch(0.15 0.02 275 / 0.08);
+  --shadow-lg:
+    0 4px 8px -4px oklch(0.15 0.02 275 / 0.1), 0 16px 32px -8px oklch(0.15 0.02 275 / 0.1);
+  --shadow-xl:
+    0 8px 16px -8px oklch(0.15 0.02 275 / 0.12), 0 32px 64px -16px oklch(0.15 0.02 275 / 0.14);
+  --shadow-glow: 0 0 0 1px var(--brand-ring), 0 8px 32px -8px var(--brand-glow);
+
+  /* Motion. Shared by CSS transitions and the Framer Motion config in
+     src/lib/motion.ts so both halves of the app ease identically. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-fade-up: fade-up 0.5s var(--ease-out-quint) both;
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* -------------------------------------------------------------------------- */
+/*  Light theme                                                               */
+/* -------------------------------------------------------------------------- */
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.995 0.002 285);
+  --foreground: oklch(0.19 0.015 280);
+
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  /* Violet-indigo. Saturated enough to feel deliberate, dark enough to hold
+     white text at AA (contrast vs white ≈ 6.4:1). */
+  --primary: oklch(0.52 0.22 280);
+  --primary-foreground: oklch(0.99 0.005 285);
+
+  --secondary: oklch(0.965 0.006 285);
+  --secondary-foreground: oklch(0.27 0.02 280);
+
+  --muted: oklch(0.965 0.006 285);
+  --muted-foreground: oklch(0.5 0.018 280);
+
+  --accent: oklch(0.955 0.018 285);
+  --accent-foreground: oklch(0.32 0.06 280);
+
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0.005 285);
+  --success: oklch(0.55 0.14 155);
+  --success-foreground: oklch(0.99 0.005 285);
+  --warning: oklch(0.62 0.15 65);
+  --warning-foreground: oklch(0.2 0.03 65);
+  --info: oklch(0.55 0.16 235);
+  --info-foreground: oklch(0.99 0.005 285);
+
+  --border: oklch(0.915 0.006 285);
+  --input: oklch(0.9 0.008 285);
+  --ring: oklch(0.52 0.22 280);
+
+  --brand: oklch(0.52 0.22 280);
+  --brand-foreground: oklch(0.99 0.005 285);
+  --brand-subtle: oklch(0.955 0.03 285);
+  --brand-ring: oklch(0.52 0.22 280 / 0.25);
+  --brand-glow: oklch(0.52 0.22 280 / 0.28);
+
+  /* Categorical series. Distinguishable by hue AND lightness so they survive
+     greyscale printing and the common forms of color blindness. */
+  --chart-1: oklch(0.52 0.22 280);
+  --chart-2: oklch(0.66 0.17 195);
+  --chart-3: oklch(0.72 0.16 85);
+  --chart-4: oklch(0.6 0.2 340);
+  --chart-5: oklch(0.58 0.15 150);
+
+  --sidebar: oklch(0.985 0.004 285);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.955 0.018 285);
+  --sidebar-accent-foreground: oklch(0.32 0.06 280);
+  --sidebar-border: oklch(0.92 0.006 285);
+  --sidebar-ring: var(--ring);
+
+  --glass-bg: oklch(1 0 0 / 0.72);
+  --glass-border: oklch(1 0 0 / 0.6);
+  --glass-blur: 16px;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Dark theme                                                                */
+/* -------------------------------------------------------------------------- */
+
+.dark {
+  --background: oklch(0.155 0.012 280);
+  --foreground: oklch(0.96 0.005 285);
+
+  --card: oklch(0.195 0.014 280);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.205 0.015 280);
+  --popover-foreground: var(--foreground);
+
+  /* Lifted and desaturated for dark surfaces: the light-mode primary on a
+     dark card fails contrast and vibrates. */
+  --primary: oklch(0.7 0.17 285);
+  --primary-foreground: oklch(0.17 0.03 280);
+
+  --secondary: oklch(0.25 0.016 280);
+  --secondary-foreground: oklch(0.95 0.005 285);
+
+  --muted: oklch(0.25 0.016 280);
+  --muted-foreground: oklch(0.68 0.015 285);
+
+  --accent: oklch(0.28 0.03 285);
+  --accent-foreground: oklch(0.95 0.01 285);
+
+  --destructive: oklch(0.68 0.19 22);
+  --destructive-foreground: oklch(0.17 0.03 22);
+  --success: oklch(0.72 0.15 158);
+  --success-foreground: oklch(0.17 0.03 158);
+  --warning: oklch(0.78 0.15 70);
+  --warning-foreground: oklch(0.19 0.03 70);
+  --info: oklch(0.7 0.14 235);
+  --info-foreground: oklch(0.17 0.03 235);
+
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.14);
+  --ring: oklch(0.7 0.17 285);
+
+  --brand: oklch(0.7 0.17 285);
+  --brand-foreground: oklch(0.17 0.03 280);
+  --brand-subtle: oklch(0.28 0.05 285);
+  --brand-ring: oklch(0.7 0.17 285 / 0.3);
+  --brand-glow: oklch(0.6 0.2 285 / 0.35);
+
+  --chart-1: oklch(0.7 0.17 285);
+  --chart-2: oklch(0.75 0.15 195);
+  --chart-3: oklch(0.8 0.14 85);
+  --chart-4: oklch(0.72 0.18 340);
+  --chart-5: oklch(0.72 0.14 150);
+
+  --sidebar: oklch(0.175 0.013 280);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.26 0.025 285);
+  --sidebar-accent-foreground: oklch(0.95 0.01 285);
+  --sidebar-border: oklch(1 0 0 / 0.09);
+  --sidebar-ring: var(--ring);
+
+  --glass-bg: oklch(0.22 0.015 280 / 0.66);
+  --glass-border: oklch(1 0 0 / 0.1);
+
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 2px -1px oklch(0 0 0 / 0.4), 0 2px 6px -1px oklch(0 0 0 / 0.3);
+  --shadow-md: 0 2px 4px -2px oklch(0 0 0 / 0.4), 0 6px 16px -4px oklch(0 0 0 / 0.35);
+  --shadow-lg: 0 4px 8px -4px oklch(0 0 0 / 0.45), 0 16px 32px -8px oklch(0 0 0 / 0.4);
+  --shadow-xl: 0 8px 16px -8px oklch(0 0 0 / 0.5), 0 32px 64px -16px oklch(0 0 0 / 0.45);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Base layer                                                                */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "cv11" 1,
+      "ss01" 1;
+    font-variant-ligatures: contextual;
+  }
+
+  /* Visible focus for keyboard users only — mouse clicks stay clean.
+     WCAG 2.4.7. */
+  :focus-visible {
+    @apply ring-2 ring-ring/60 ring-offset-2 ring-offset-background outline-none;
+  }
+
+  ::selection {
+    background: var(--brand-subtle);
+    color: var(--accent-foreground);
+  }
+
+  /* Headings default to tight tracking; the large-type look in the spec comes
+     from size, not from letter-spacing hacks per component. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading text-balance;
+    letter-spacing: -0.02em;
+  }
+
+  p,
+  li {
+    @apply text-pretty;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* -------------------------------------------------------------------------- */
+/*  Utilities                                                                 */
+/*                                                                            */
+/*  Defined once here rather than repeated as class soup in components.        */
+/* -------------------------------------------------------------------------- */
+
+@utility glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+}
+
+/* Gradient clipped to glyphs. `inline-block` prevents descenders clipping. */
+@utility text-gradient {
+  background-image: linear-gradient(
+    100deg,
+    var(--foreground) 0%,
+    var(--brand) 45%,
+    oklch(0.65 0.19 200) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  display: inline-block;
+  padding-bottom: 0.08em;
+}
+
+@utility text-gradient-brand {
+  background-image: linear-gradient(
+    100deg,
+    var(--brand) 0%,
+    oklch(0.6 0.24 330) 55%,
+    oklch(0.68 0.17 210) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  display: inline-block;
+  padding-bottom: 0.08em;
+}
+
+@utility surface-gradient {
+  background-image:
+    radial-gradient(120% 120% at 0% 0%, var(--brand-subtle) 0%, transparent 55%),
+    linear-gradient(to bottom, var(--card), var(--background));
+}
+
+/* 1px gradient hairline via border-box masking — no pseudo-element needed. */
+@utility border-gradient {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(120deg, var(--brand) 0%, transparent 40%, transparent 60%, var(--brand) 100%)
+      border-box;
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Skeleton sweep. Pairs with <Shimmer /> and the Skeleton primitive. */
+@utility shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+@utility grid-pattern {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+}
+
+/* Hide scrollbars but keep the element scrollable — for the template
+   filmstrip and preview rails, never for page-level scroll. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Keyframes                                                                 */
+/* -------------------------------------------------------------------------- */
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes aurora {
+  0% {
+    transform: translate3d(-6%, -3%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(5%, 4%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-3%, 6%, 0) scale(1.04);
+  }
 }

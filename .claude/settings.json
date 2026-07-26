@@ -1,7 +1,52 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm dlx *)"
+      "Bash(pnpm dlx *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm lint *)",
+      "Bash(node -e \"import\\('./core-web-vitals.js'\\).then\\(m=>console.log\\('default is array:',Array.isArray\\(m.default\\), 'keys:', Object.keys\\(m\\)\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(awk 'NR>=2050 && NR<=2300' dist/index.js)",
+      "Bash(awk 'NR>=1044 && NR<=1300' dist/index.js)",
+      "Bash(node -e \"const i=require\\('lucide-react'\\);const k=Object.keys\\(i\\);console.log\\(k.filter\\(n=>/git|hub|twitt|x$|link|brand/i.test\\(n\\)\\).join\\(' '\\)\\)\")",
+      "Bash(pnpm build *)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm remove *)",
+      "Bash(pnpm test:e2e)",
+      "Bash(pnpm -v)",
+      "Bash(node -e \"console.log\\(require\\('/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/package.json'\\).packageManager\\)\")",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm format *)",
+      "Bash(python3 -c ' *)",
+      "Bash(pnpm verify *)",
+      "Bash(CI=1 pnpm test:e2e)",
+      "Bash(CI=1 PORT=3100 pnpm test:e2e)",
+      "Bash(CI=1 PORT=3100 pnpm exec playwright test e2e/seo.spec.ts --project=chromium --reporter=list)",
+      "Bash(lsof -nP -iTCP:3000 -sTCP:LISTEN)",
+      "Bash(brew install *)",
+      "Bash(node -e \"console.log\\(require.resolve\\('server-only'\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./node_modules/next/package.json'\\); console.log\\(JSON.stringify\\(p.dependencies,null,1\\)\\)\")",
+      "Bash(supabase --version)",
+      "Bash(supabase init *)",
+      "Bash(perl -0pi -e \"s/coalesce\\\\\\(\\\\\\(i\\\\.item -> 'current'\\\\\\)::text::boolean, false\\\\\\)/public.jsonb_to_bool\\(i.item -> 'current', false\\)/g\" supabase/migrations/20260726090100_projections.sql)",
+      "Bash(awk '/^create table public.\\(profiles|ai_usage|activity_logs|rate_limit_events|subscriptions|exports\\)/,/^\\\\\\);/' supabase/migrations/20260726090000_core.sql)",
+      "Bash(grep -v '^$')",
+      "Bash(perl -0pi -e 's/-- The usage ledger is append-only.*?\\\\n-- ── Dashboard counters/-- ── Dashboard counters/s' supabase/migrations/20260726090300_functions.sql)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(awk '/^create table/,/^\\\\\\);/' supabase/migrations/20260726090000_core.sql)",
+      "Bash(grep -v \"^$\")",
+      "Bash(awk '/^create table/,/^\\\\\\);/' supabase/migrations/20260726090100_projections.sql)",
+      "Bash(node -e \"const l=require\\('lucide-react'\\);for\\(const n of ['Loader2','Loader2Icon','CircleIcon','CheckIcon','EyeIcon','EyeOffIcon','MailIcon','LockIcon','ArrowLeftIcon']\\)console.log\\(n, typeof l[n]\\)\")",
+      "Bash(node -e \"const i=require\\('lucide-react'\\); ['AlertCircle','MailCheck','CheckCircle2','MailOpen','ArrowLeft','ShieldCheck','KeyRound','Sparkles'].forEach\\(n=>console.log\\(n, typeof i[n]\\)\\)\")",
+      "Bash(python3 -)",
+      "Bash(cd /Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder; ls supabase/migrations; echo \"##### functions migration\"; grep -n \"create or replace function\\\\|create function\" supabase/migrations/*.sql; echo \"##### dashboard stats\"; sed -n '/get_dashboard_stats/,/language sql/p' supabase/migrations/*functions*.sql | head -80)",
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(pnpm vitest *)"
+    ],
+    "additionalDirectories": [
+      "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/supabase/migrations"
     ]
   }
 }

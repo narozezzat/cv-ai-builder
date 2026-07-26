@@ -1,0 +1,144 @@
+# Two jobs on purpose.
+#
+# `quality` is cheap and catches most mistakes, so it must not sit behind a
+# Next.js build. `e2e` owns the build because Playwright needs the artifact
+# anyway — building in a third job and shipping `.next/` between jobs costs more
+# in upload/download than it saves.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A force-push should cancel the run it superseded. Never cancel on main: those
+# runs are the record of what was released.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Read-only by default. Jobs that need more ask for it explicitly.
+permissions:
+  contents: read
+
+env:
+  # Metadata, sitemap, and JSON-LD all absolutize against this. Left unset the
+  # app falls back to localhost, and the SEO assertions would then pass against
+  # a value that is wrong in production.
+  NEXT_PUBLIC_SITE_URL: https://reforge.app
+
+  # `src/lib/env/public.ts` parses eagerly and throws on a missing value, and
+  # middleware imports it, so `next build` needs these present even though no CI
+  # job talks to a database. Deliberate placeholders: a real project URL and key
+  # here would let a forked-PR workflow read them out of the client bundle.
+  # Nothing in CI authenticates, so nothing notices they are fake.
+  NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key-not-a-real-credential
+
+jobs:
+  quality:
+    name: Typecheck, lint, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # `--max-warnings=0`: the pre-commit hook already refuses to commit
+      # warnings, so anything arriving here as one got in by bypassing it.
+      - name: Lint
+        run: pnpm lint --max-warnings=0
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Unit tests
+        run: pnpm test:coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  e2e:
+    name: Build and E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Keeps incremental compilation and the Turbopack/webpack cache warm. Keyed
+      # on the lockfile plus the source tree so a source-only change still
+      # restores a usable cache instead of building cold.
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', '*.ts', '*.mjs') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-${{ runner.os }}-
+
+      - name: Build
+        run: pnpm build
+
+      # Browsers are ~400 MB. Keyed on the lockfile rather than on the resolved
+      # @playwright/test version: coarser, but a stale browser cache is a
+      # "Executable doesn't exist" failure, and the lockfile is the only thing
+      # here that provably changes whenever the pinned browser revision does.
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      # `--with-deps` pulls the system libraries WebKit and Chromium need on a
+      # bare runner. Those live outside ~/.cache, so it runs on a cache hit too,
+      # just without re-downloading the browsers.
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Install Playwright system dependencies
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium webkit
+
+      # The config detects CI and serves the build above with `pnpm start`
+      # instead of rebuilding.
+      - name: E2E tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
