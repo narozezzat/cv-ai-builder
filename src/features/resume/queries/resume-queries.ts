@@ -15,9 +15,10 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import {
-  type FolderRow,
+  type FolderSummary,
   RESUME_SUMMARY_COLUMNS,
   type ResumeSummary,
+  type ResumeTagSummary,
   type ResumeVisibility,
 } from "@/types/db";
 import {
@@ -220,11 +221,6 @@ export async function getResumeForEditor(resumeId: string): Promise<ResumeEditor
 
 // ── Folders and tags ──────────────────────────────────────────────────────────
 
-export interface FolderSummary extends Pick<FolderRow, "id" | "name" | "color" | "sort_order"> {
-  /** Active resumes filed here. Drives the count beside each folder in the sidebar. */
-  resumeCount: number;
-}
-
 /**
  * Folders with their resume counts.
  *
@@ -278,11 +274,6 @@ export async function listFolders(): Promise<FolderSummary[]> {
     ...folder,
     resumeCount: counts.get(folder.id) ?? 0,
   }));
-}
-
-export interface ResumeTagSummary {
-  tag: string;
-  count: number;
 }
 
 /**

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 
-import { Logo, ThemeToggle } from "@/components/shared";
+import { ButtonLink, Logo, ThemeToggle } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { routes } from "@/lib/routes";
@@ -58,17 +58,17 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button
+          <ButtonLink
             variant="ghost"
             size="sm"
             className="hidden sm:inline-flex"
-            render={<Link href={routes.login} />}
+            href={routes.login}
           >
             Log in
-          </Button>
-          <Button variant="brand" size="sm" render={<Link href={routes.signup} />}>
+          </ButtonLink>
+          <ButtonLink variant="brand" size="sm" href={routes.signup}>
             Get started
-          </Button>
+          </ButtonLink>
 
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
@@ -101,9 +101,9 @@ export function SiteHeader() {
                   </Link>
                 ))}
                 <div className="my-3 h-px bg-border" />
-                <Button variant="outline" className="w-full" render={<Link href={routes.login} />}>
+                <ButtonLink variant="outline" className="w-full" href={routes.login}>
                   Log in
-                </Button>
+                </ButtonLink>
               </nav>
             </SheetContent>
           </Sheet>

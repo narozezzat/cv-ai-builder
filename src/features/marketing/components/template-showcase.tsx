@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { Stagger, StaggerItem } from "@/components/shared";
-import { Button } from "@/components/ui/button";
+import { ButtonLink, Stagger, StaggerItem } from "@/components/shared";
 import { routes } from "@/lib/routes";
 
 import { TEMPLATE_PREVIEWS, type TemplateLayoutPreview, type TemplatePreview } from "../content";
@@ -161,10 +159,10 @@ export function TemplateShowcase() {
       </Stagger>
 
       <div className="mt-12 flex justify-center">
-        <Button variant="outline" size="lg" render={<Link href={routes.signup} />}>
+        <ButtonLink variant="outline" size="lg" href={routes.signup}>
           Browse all 20 templates
           <ArrowRight data-icon="inline-end" />
-        </Button>
+        </ButtonLink>
       </div>
     </Section>
   );

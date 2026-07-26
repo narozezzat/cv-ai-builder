@@ -89,6 +89,10 @@ export function UserMenu({ fullName, email, avatarUrl }: UserMenuProps) {
         <form action={signOutAction} role="none">
           <DropdownMenuItem
             variant="destructive"
+            // Menu items render a `<div>` by default, so the primitive has to be
+            // told this one really is a button or it re-adds the role and key
+            // handling the native element already provides.
+            nativeButton
             render={<button type="submit" className="w-full" />}
           >
             <LogOutIcon />

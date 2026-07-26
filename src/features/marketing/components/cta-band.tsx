@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { FadeUp } from "@/components/shared";
-import { Button } from "@/components/ui/button";
+import { ButtonLink, FadeUp } from "@/components/shared";
 import { routes } from "@/lib/routes";
 
 /** Closing call to action. Last thing before the footer, so it repeats the one action that matters. */
@@ -32,22 +30,17 @@ export function CtaBand() {
           minutes.
         </p>
         <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button
+          <ButtonLink
             size="xl"
             className="bg-white text-neutral-950 hover:bg-white/90"
-            render={<Link href={routes.signup} />}
+            href={routes.signup}
           >
             Create free account
             <ArrowRight data-icon="inline-end" />
-          </Button>
-          <Button
-            size="xl"
-            variant="glass"
-            className="text-white"
-            render={<Link href={routes.login} />}
-          >
+          </ButtonLink>
+          <ButtonLink size="xl" variant="glass" className="text-white" href={routes.login}>
             I already have one
-          </Button>
+          </ButtonLink>
         </div>
       </FadeUp>
     </section>

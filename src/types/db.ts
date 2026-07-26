@@ -124,6 +124,24 @@ export type ResumeSummary = Pick<
   | "updated_at"
 >;
 
+/**
+ * A folder plus the number of active resumes filed in it.
+ *
+ * Lives here rather than beside the query that builds it because the sidebar and
+ * the move-to-folder menu are client components: importing the shape from the
+ * query module would mean a `"use client"` file reaching into a `server-only` one
+ * and relying on the compiler to erase the import.
+ */
+export interface FolderSummary extends Pick<FolderRow, "id" | "name" | "color" | "sort_order"> {
+  resumeCount: number;
+}
+
+/** One tag and how many active resumes carry it. Same client-boundary reason as above. */
+export interface ResumeTagSummary {
+  tag: string;
+  count: number;
+}
+
 // ── Function helpers ──────────────────────────────────────────────────────────
 
 type PublicFunctions = Database["public"]["Functions"];

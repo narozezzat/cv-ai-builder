@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 
-import { FadeUp, Stagger, StaggerItem } from "@/components/shared";
-import { Button } from "@/components/ui/button";
+import { ButtonLink, FadeUp, Stagger, StaggerItem } from "@/components/shared";
 import { routes } from "@/lib/routes";
 
 import { HERO_PROOF } from "../content";
@@ -53,13 +52,13 @@ export function Hero() {
           </FadeUp>
 
           <FadeUp delay={0.18} className="mt-9 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Button size="xl" variant="brand" render={<Link href={routes.signup} />}>
+            <ButtonLink size="xl" variant="brand" href={routes.signup}>
               Build my resume
               <ArrowRight data-icon="inline-end" />
-            </Button>
-            <Button size="xl" variant="outline" render={<Link href={routes.templates} />}>
+            </ButtonLink>
+            <ButtonLink size="xl" variant="outline" href={routes.templates}>
               See the templates
-            </Button>
+            </ButtonLink>
           </FadeUp>
 
           <Stagger

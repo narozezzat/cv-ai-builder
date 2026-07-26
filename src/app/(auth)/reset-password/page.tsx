@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/shared";
 import { AuthCard, AuthErrorAlert, ResetPasswordForm } from "@/features/auth";
 import { routes } from "@/lib/routes";
 import { getCurrentUser } from "@/services/supabase/server";
@@ -43,22 +42,12 @@ export default async function ResetPasswordPage({
         <AuthErrorAlert code={param(params, "error_code")} />
 
         <div className="space-y-3">
-          <Button
-            variant="brand"
-            size="lg"
-            className="w-full"
-            render={<Link href={routes.forgotPassword} />}
-          >
+          <ButtonLink variant="brand" size="lg" className="w-full" href={routes.forgotPassword}>
             Request a new link
-          </Button>
-          <Button
-            variant="ghost"
-            size="lg"
-            className="w-full"
-            render={<Link href={routes.login} />}
-          >
+          </ButtonLink>
+          <ButtonLink variant="ghost" size="lg" className="w-full" href={routes.login}>
             Back to sign in
-          </Button>
+          </ButtonLink>
         </div>
       </AuthCard>
     );

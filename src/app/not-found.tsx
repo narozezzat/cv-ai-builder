@@ -1,9 +1,7 @@
 import { ArrowLeft, LayoutTemplate } from "lucide-react";
-import Link from "next/link";
 import type { Metadata } from "next";
 
-import { StatusPage } from "@/components/shared";
-import { Button } from "@/components/ui/button";
+import { ButtonLink, StatusPage } from "@/components/shared";
 import { routes } from "@/lib/routes";
 
 export const metadata: Metadata = {
@@ -20,14 +18,14 @@ export default function NotFound() {
       description="The link may be out of date, or the resume it pointed to was deleted or made private."
       actions={
         <>
-          <Button size="lg" variant="brand" render={<Link href={routes.home} />}>
+          <ButtonLink size="lg" variant="brand" href={routes.home}>
             <ArrowLeft data-icon="inline-start" />
             Back home
-          </Button>
-          <Button size="lg" variant="outline" render={<Link href={routes.templates} />}>
+          </ButtonLink>
+          <ButtonLink size="lg" variant="outline" href={routes.templates}>
             <LayoutTemplate data-icon="inline-start" />
             Browse templates
-          </Button>
+          </ButtonLink>
         </>
       }
     />

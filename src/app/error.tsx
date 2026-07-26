@@ -1,10 +1,9 @@
 "use client";
 
 import { Home, RotateCcw } from "lucide-react";
-import Link from "next/link";
 import { useEffect } from "react";
 
-import { StatusPage } from "@/components/shared";
+import { ButtonLink, StatusPage } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/lib/routes";
 
@@ -51,10 +50,10 @@ export default function Error({
             <RotateCcw data-icon="inline-start" />
             Try again
           </Button>
-          <Button size="lg" variant="outline" render={<Link href={routes.home} />}>
+          <ButtonLink size="lg" variant="outline" href={routes.home}>
             <Home data-icon="inline-start" />
             Back home
-          </Button>
+          </ButtonLink>
         </>
       }
     />

@@ -40,11 +40,9 @@ export {
   listResumeTags,
   listResumes,
   listTrashedResumes,
-  type FolderSummary,
   type ResumeEditorFailure,
   type ResumeEditorRecord,
   type ResumeEditorResult,
-  type ResumeTagSummary,
 } from "./queries/resume-queries";
 
 export {
