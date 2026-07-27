@@ -37,7 +37,11 @@ beforeAll(() => {
   vi.stubGlobal("ResizeObserver", ObserverStub);
   vi.stubGlobal("IntersectionObserver", ObserverStub);
 
-  if (!Element.prototype.scrollIntoView) {
+  // Guarded because `setupFiles` runs for every test file, including the ones
+  // that opt into the `node` environment with a `@vitest-environment` docblock.
+  // There is no DOM there, so touching `Element` unconditionally would fail the
+  // integration tests before they reach a single assertion.
+  if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = vi.fn();
   }
 });
