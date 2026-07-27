@@ -12,6 +12,13 @@
  * encapsulate behind an action there.
  */
 
+export { CreateResumeButton } from "./components/create-resume-button";
+export { EmptyTrashButton } from "./components/empty-trash-button";
+export { FolderNav } from "./components/folder-nav";
+export { ResumeFilters } from "./components/resume-filters";
+export { ResumeGrid } from "./components/resume-grid";
+export { TrashList } from "./components/trash-list";
+
 export { HISTORY_LIMITS } from "./store/history";
 export {
   selectBasics,
@@ -35,6 +42,7 @@ export {
 
 export {
   countTrashedResumes,
+  getResumeCounts,
   getResumeForEditor,
   listFolders,
   listResumeTags,
@@ -48,6 +56,7 @@ export {
 export {
   DEFAULT_RESUME_LIST_FILTERS,
   DEFAULT_RESUME_TITLE,
+  RESUME_SEARCH_MAX,
   RESUME_SORTS,
   RESUME_SORT_LABELS,
   RESUME_TAG_LIMIT,

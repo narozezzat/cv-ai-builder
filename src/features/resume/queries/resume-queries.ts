@@ -320,6 +320,35 @@ export async function listResumeTags(): Promise<ResumeTagSummary[]> {
   );
 }
 
+/**
+ * Totals for the folder rail's "All resumes" and "Unfiled" rows.
+ *
+ * Deliberately not derived from the grid's own result set: that one is filtered,
+ * and a sidebar whose counts change when you search is a sidebar that can't be
+ * used to navigate. Both are `head: true` counts, so neither transfers rows.
+ */
+export async function getResumeCounts(): Promise<{ total: number; unfiled: number }> {
+  const supabase = await createSupabaseServerClient();
+
+  const [total, unfiled] = await Promise.all([
+    supabase.from("resumes").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase
+      .from("resumes")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .is("folder_id", null),
+  ]);
+
+  if (total.error || unfiled.error) {
+    console.error("[resume] counts failed", {
+      total: total.error?.message,
+      unfiled: unfiled.error?.message,
+    });
+  }
+
+  return { total: total.count ?? 0, unfiled: unfiled.count ?? 0 };
+}
+
 /** Trash badge count. Cheap: `head: true` fetches no rows. */
 export async function countTrashedResumes(): Promise<number> {
   const supabase = await createSupabaseServerClient();
