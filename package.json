@@ -21,6 +21,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "gen:types": "supabase gen types typescript --local > src/types/database.ts",
+    "gen:types:remote": "supabase gen types typescript --linked > src/types/database.ts",
+    "db:push": "supabase db push",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "prepare": "husky"
   },

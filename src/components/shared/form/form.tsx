@@ -80,6 +80,19 @@ export function Form<TFieldValues extends FieldValues>({
     <FormProvider {...form}>
       <form
         noValidate
+        /*
+         * Security control, not a formality. Submission is handled by `onSubmit`,
+         * which only exists once React has hydrated — and a form submitted before
+         * that falls back to the browser's default method. That default is GET,
+         * which serialises every field into the query string: on the sign-in form
+         * that puts the password in the address bar, the browser history, the
+         * server's access log, and the `Referer` sent to the next origin.
+         *
+         * `post` makes the pre-hydration submit a dead end (no route handler
+         * answers it) instead of a leak. Placed before the spread so a caller can
+         * still override it deliberately.
+         */
+        method="post"
         onSubmit={form.handleSubmit(onSubmit)}
         className={cn("space-y-5", className)}
         {...props}

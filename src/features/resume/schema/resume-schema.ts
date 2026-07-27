@@ -187,6 +187,15 @@ export const createFolderSchema = z.object({
   name: folderNameSchema,
 });
 
+/**
+ * The folder dialog's form shape.
+ *
+ * Create and rename share one form because they share one field; the `folderId`
+ * that distinguishes them comes from props, not from the user, so it has no
+ * business in the form state.
+ */
+export type FolderNameInput = z.infer<typeof createFolderSchema>;
+
 export const renameFolderSchema = z.object({
   folderId: folderIdSchema,
   name: folderNameSchema,

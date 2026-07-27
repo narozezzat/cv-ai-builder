@@ -242,6 +242,13 @@ double_confirm_changes = true
 # On locally, because the verification flow is a stated requirement and a
 # disabled confirmation step means the `/verify-email` screen and the callback
 # route never get exercised in development.
+#
+# WARNING: `supabase config push` applies this to the linked *hosted* project too,
+# where the built-in SMTP sends ~2 emails/hour and only to the project owner's own
+# address — so confirmations on turn signup into "Too many emails sent" for anyone
+# else. If you switch it off in the dashboard to get unblocked, the next
+# `config push` turns it back on. Either configure `[auth.email.smtp]` below with a
+# real provider, or do not push auth config until you have.
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 #

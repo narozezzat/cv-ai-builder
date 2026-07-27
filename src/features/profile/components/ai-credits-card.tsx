@@ -1,7 +1,8 @@
 import { SparklesIcon } from "lucide-react";
 
 import { SectionCard } from "@/components/shared";
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
+
+import { AiCreditsMeter } from "./ai-credits-meter";
 
 /**
  * The free grant, mirroring `profiles.ai_credits integer not null default 50` and
@@ -11,6 +12,10 @@ import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress
  * allowance, at which point this becomes a lookup on the subscription row rather
  * than a constant — the balance itself already comes from the database, so nothing
  * downstream has to change.
+ *
+ * Exported from a Server Component on purpose. `"use client"` here would turn this
+ * into a client reference instead of the number `50`, and `StatCards` reads it on
+ * the server.
  */
 export const FREE_MONTHLY_AI_CREDITS = 50;
 
@@ -30,7 +35,6 @@ export function AiCreditsCard({ credits }: AiCreditsCardProps) {
   const remaining = Math.max(0, credits ?? 0);
   // A balance above the free grant (top-up, promo) must not render a bar past 100%.
   const allowance = Math.max(FREE_MONTHLY_AI_CREDITS, remaining);
-  const percent = Math.round((remaining / allowance) * 100);
 
   return (
     <SectionCard
@@ -42,21 +46,7 @@ export function AiCreditsCard({ credits }: AiCreditsCardProps) {
           : "Spent on generation, rewriting, and scoring."
       }
     >
-      {/*
-        `Progress` associates its own label and value with the progressbar role, so
-        the balance is announced as "Remaining, 32 of 50" rather than as a bare
-        percentage. That is why the numbers live inside it and not beside it.
-      */}
-      <Progress value={percent}>
-        <ProgressLabel>Remaining</ProgressLabel>
-        {/*
-          A render function, not text: Base UI's `Value` owns its own child and
-          passes the formatted percentage in. Ignoring both arguments is the point —
-          "32 / 50" is the number the user is actually deciding on, and the percent
-          is only what drives the bar.
-        */}
-        <ProgressValue>{() => `${remaining} / ${allowance}`}</ProgressValue>
-      </Progress>
+      <AiCreditsMeter remaining={remaining} allowance={allowance} />
     </SectionCard>
   );
 }
