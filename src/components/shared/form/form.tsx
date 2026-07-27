@@ -1,7 +1,16 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
-import { createContext, useContext, useId, type ComponentProps, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import {
   Controller,
   FormProvider,
@@ -10,6 +19,7 @@ import {
   type ControllerRenderProps,
   type FieldPath,
   type FieldValues,
+  type PathValue,
   type SubmitHandler,
   type UseFormReturn,
 } from "react-hook-form";
@@ -76,9 +86,63 @@ export function Form<TFieldValues extends FieldValues>({
   children,
   ...props
 }: FormProps<TFieldValues>) {
+  const formRef = useRef<HTMLFormElement>(null);
+
+  /**
+   * Copies values the DOM has and React Hook Form does not into form state.
+   *
+   * Two ways a field ends up filled on screen and empty in state, both of which
+   * produced a sign-in form that insisted "Enter your password" over a field full
+   * of dots:
+   *
+   * 1. **Password managers and browser autofill.** Chrome's own autofill dispatches
+   *    an `input` event, but extensions frequently set `.value` directly, and a
+   *    direct assignment fires nothing — React never learns about it.
+   * 2. **Typing before hydration.** The markup is interactive as soon as it paints;
+   *    RHF's state does not exist until the bundle runs. Anything typed in between
+   *    lives only in the DOM.
+   *
+   * Run on mount and again immediately before every submit, because autofill can
+   * land at any point after load and there is no event to hook. Only ever fills a
+   * field state considers empty, so it cannot overwrite what the user typed.
+   */
+  const adoptDomValues = useCallback(() => {
+    const element = formRef.current;
+
+    if (!element) return;
+
+    for (const control of Array.from(element.elements)) {
+      const isTextual =
+        control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement;
+
+      if (!isTextual || !control.name || control.value === "") continue;
+      // Checkboxes, radios, and file inputs carry their state somewhere other than
+      // `.value`, and none of them is autofillable this way.
+      if (
+        control instanceof HTMLInputElement &&
+        ["checkbox", "radio", "file"].includes(control.type)
+      )
+        continue;
+
+      const name = control.name as FieldPath<TFieldValues>;
+      const known = form.getValues(name);
+
+      if (known === "" || known === undefined || known === null) {
+        form.setValue(name, control.value as PathValue<TFieldValues, FieldPath<TFieldValues>>, {
+          shouldDirty: true,
+        });
+      }
+    }
+  }, [form]);
+
+  useEffect(() => {
+    adoptDomValues();
+  }, [adoptDomValues]);
+
   return (
     <FormProvider {...form}>
       <form
+        ref={formRef}
         noValidate
         /*
          * Security control, not a formality. Submission is handled by `onSubmit`,
@@ -93,7 +157,14 @@ export function Form<TFieldValues extends FieldValues>({
          * still override it deliberately.
          */
         method="post"
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={(event) => {
+          // Before validation, not after: an autofilled password that state never
+          // saw would otherwise fail `min(1)` and the user would be told to enter
+          // what they can plainly see is already there.
+          adoptDomValues();
+
+          return form.handleSubmit(onSubmit)(event);
+        }}
         className={cn("space-y-5", className)}
         {...props}
       >

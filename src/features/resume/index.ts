@@ -13,6 +13,7 @@
  */
 
 export { CreateResumeButton } from "./components/create-resume-button";
+export { ResumeEditor, type ResumeEditorProps } from "./components/editor/resume-editor";
 export { EmptyTrashButton } from "./components/empty-trash-button";
 export { FolderNav } from "./components/folder-nav";
 export { ResumeFilters } from "./components/resume-filters";
