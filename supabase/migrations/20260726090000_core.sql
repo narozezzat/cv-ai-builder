@@ -33,6 +33,32 @@ $$;
 comment on function public.set_updated_at is
   'Maintains updated_at on write. Attached to every table that has the column.';
 
+-- Immutable text[] flattener, needed by `resumes.search_vector`.
+--
+-- Postgres marks the built-in `array_to_string(anyarray, text)` STABLE, not
+-- IMMUTABLE, because for a polymorphic argument it has to reach the element
+-- type's output function — which in general may depend on GUCs (think
+-- `timestamptz` and `TimeZone`). A generated column requires immutability, so the
+-- built-in cannot be used in one and Postgres rejects the table with
+-- `42P17 generation expression is not immutable`.
+--
+-- Narrowing the signature to `text[]` removes the reason for the STABLE marking:
+-- text's output function is the identity, so the result depends on nothing but the
+-- arguments. The marking below is therefore a fact about this signature, not an
+-- override of the planner's judgement about the general case.
+create or replace function public.array_to_search_text(value text[])
+returns text
+language sql
+immutable
+parallel safe
+set search_path = ''
+as $$
+  select coalesce(array_to_string(value, ' '), '')
+$$;
+
+comment on function public.array_to_search_text is
+  'Joins a text[] for full-text indexing. Immutable, unlike array_to_string(anyarray, text), so it is usable in a generated column.';
+
 -- ── Enumerated types ──────────────────────────────────────────────────────────
 --
 -- Enums are used only for genuinely closed sets. Things that grow with product
@@ -290,10 +316,13 @@ create table public.resumes (
   -- not the document body: full-text over the resume text is served by the
   -- projection tables, which are already shredded into rows and can be ranked
   -- per section instead of as one undifferentiated blob.
+  -- `'english'::regconfig` and not `'english'`: the bare literal would be resolved
+  -- at parse time against the session's search config, which is exactly the kind of
+  -- GUC dependency a generated column may not have.
   search_vector tsvector generated always as (
     to_tsvector(
-      'english',
-      coalesce(title, '') || ' ' || coalesce(array_to_string(tags, ' '), '')
+      'english'::regconfig,
+      coalesce(title, '') || ' ' || public.array_to_search_text(tags)
     )
   ) stored
 );
