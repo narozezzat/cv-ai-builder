@@ -112,6 +112,39 @@ feature's `index.ts`", not "disable the rule".
 
 ## Gotchas that have already cost time
 
+- **Never pass a function across the Server → Client boundary.** A render-prop
+  child is still a prop: `<ProgressValue>{() => …}</ProgressValue>` inside a
+  Server Component throws _"Functions are not valid as a child of Client
+  Components"_ and takes the whole route to its error boundary. Base UI's
+  `ProgressValue`, `Tooltip`, and `Select` children are typed as functions, so any
+  component using them must be a `"use client"` leaf — see
+  [ai-credits-meter.tsx](src/features/profile/components/ai-credits-meter.tsx),
+  which exists only for that reason.
+- **`"use client"` turns a module's value exports into client references.** Adding
+  it to fix the error above is the wrong fix twice over: a Server Component
+  importing a constant from that module gets a proxy, not the number, and arithmetic
+  on it yields `NaN`. Extract the interactive part; leave the constants on the server.
+- **`Logo`, `ButtonLink`, and `Logo`-like components render their own `<a>`.** Wrap
+  one in a `<Link>` and you get _"`<a>` cannot be a descendant of `<a>`"_, a
+  hydration error, and two link nodes for one target. Pass `href` instead.
+- **Anything interactive in a disclosure header is a sibling of the trigger, never
+  inside it.** A `<button>` cannot contain a `<button>`, so drag handles, visibility
+  toggles, and overflow menus sit beside `AccordionTrigger` / `CollapsibleTrigger`.
+- **A `ConfirmDialog` `trigger` inside a `DropdownMenuItem` never opens** — activating
+  the item unmounts the menu first. Drive `open` from state in that case.
+- **Controlled inputs need the DOM's value adopted.** Password managers set `.value`
+  without firing an event, and anything typed before hydration exists only in the
+  DOM, so React Hook Form sees `""` and reports "Enter your password" over a filled
+  field. [form.tsx](src/components/shared/form/form.tsx) adopts DOM values on mount
+  and again before every submit; keep that behaviour if the form layer is reworked.
+- **dnd-kit: no `restrictToParentElement` on sortable rows.** It clamps the drag to
+  the measured parent and silently kills both pointer and keyboard reordering —
+  drags start, announce, and drop in place. `restrictToVerticalAxis` alone is right
+  for a vertical list.
+- **dnd-kit + variable row heights breaks keyboard stepping.** One arrow press moves
+  the active rect by the _neighbour's_ height, so a row expanded to 250px never
+  gets its centre past a 52px sibling and `closestCenter` keeps resolving to itself.
+  Collapse expanded rows while a drag is in progress.
 - **`global-error.tsx` bypasses the root layout**, so `globals.css` is not in the
   tree. Inline styles only, and it must render its own `<html>`/`<body>`.
 - **`error.tsx` must not render `error.message`.** In dev it can carry connection
