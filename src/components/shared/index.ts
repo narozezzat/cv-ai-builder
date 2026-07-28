@@ -9,6 +9,7 @@
 export { AsyncBoundary } from "./async-boundary";
 export { GitHubIcon, GoogleIcon, XIcon } from "./brand-icons";
 export { ButtonLink } from "./button-link";
+export { CommandPaletteTrigger } from "./command-palette-trigger";
 export { ConfirmDialog } from "./confirm-dialog";
 export { EmptyState } from "./empty-state";
 export { ErrorBoundary, ErrorFallback, type FallbackProps } from "./error-boundary";

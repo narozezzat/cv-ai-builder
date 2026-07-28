@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { CommandPaletteProvider } from "@/components/providers/command-palette-provider";
 import { AppHeader } from "@/features/dashboard";
 import { getProfile, parseAppearance, ThemeSync } from "@/features/profile";
 import { requireUser } from "@/services/supabase/server";
@@ -25,22 +26,29 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const { theme } = parseAppearance(profile?.theme, profile?.locale);
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <AppHeader
-        fullName={profile?.full_name ?? null}
-        email={profile?.email ?? user.email ?? null}
-        avatarUrl={profile?.avatar_url ?? null}
-      />
+    /*
+      The palette wraps the whole shell rather than sitting in the header: pages under
+      this group register their own commands into it, and a provider mounted inside the
+      header would be above them in the tree but not around them.
+    */
+    <CommandPaletteProvider>
+      <div className="flex min-h-svh flex-col">
+        <AppHeader
+          fullName={profile?.full_name ?? null}
+          email={profile?.email ?? user.email ?? null}
+          avatarUrl={profile?.avatar_url ?? null}
+        />
 
-      {/*
-        `id="main"` is what the root layout's skip link targets. Every top-level
-        layout must provide it, or keyboard users land nowhere.
-      */}
-      <main id="main" className="flex-1">
-        {children}
-      </main>
+        {/*
+          `id="main"` is what the root layout's skip link targets. Every top-level
+          layout must provide it, or keyboard users land nowhere.
+        */}
+        <main id="main" className="flex-1">
+          {children}
+        </main>
 
-      <ThemeSync preference={theme} />
-    </div>
+        <ThemeSync preference={theme} />
+      </div>
+    </CommandPaletteProvider>
   );
 }
