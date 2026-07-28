@@ -9,10 +9,13 @@
  */
 
 export { ActivityFeed } from "./components/activity-feed";
+export { ActivityFeedSection, ActivityFeedSkeleton } from "./components/activity-feed-section";
 export { AiCreditsCard, FREE_MONTHLY_AI_CREDITS } from "./components/ai-credits-card";
+export { AiCreditsSection, AiCreditsSkeleton } from "./components/ai-credits-section";
 export { AiPreferencesForm } from "./components/ai-preferences-form";
 export { AppearanceForm } from "./components/appearance-form";
 export { AvatarUploader } from "./components/avatar-uploader";
+export { DashboardGreeting, DashboardGreetingSkeleton } from "./components/dashboard-greeting";
 export { ProfileForm } from "./components/profile-form";
 export { ThemeSync } from "./components/theme-sync";
 export { UserAvatar } from "./components/user-avatar";

@@ -1,19 +1,19 @@
 import { Trash2 } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { ButtonLink, PageHeader } from "@/components/shared";
-import { Badge } from "@/components/ui/badge";
+import { AsyncBoundary, ButtonLink, PageHeader } from "@/components/shared";
 import {
   CreateResumeButton,
-  FolderNav,
-  ResumeFilters,
-  ResumeGrid,
-  countTrashedResumes,
-  getResumeCounts,
-  listFolders,
-  listResumeTags,
-  listResumes,
+  FolderNavSection,
+  FolderNavSkeleton,
+  ResumeFiltersSection,
+  ResumeFiltersSkeleton,
+  ResumeGridSection,
+  ResumeGridSkeleton,
+  TrashCountBadge,
   parseResumeListFilters,
+  resumeListHref,
 } from "@/features/resume";
 import { routes } from "@/lib/routes";
 
@@ -31,15 +31,11 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
   // Parsed, not read directly: `searchParams` is user input, and every filter
   // reaches a database predicate. `parseResumeListFilters` is the only thing
   // standing between a hand-edited URL and an invalid query.
+  //
+  // This is the page's only `await` — the four reads it used to gather here now
+  // stream inside their own boundaries below, so the header and the two-column
+  // frame paint before any of them resolve.
   const filters = parseResumeListFilters(await searchParams);
-
-  const [resumes, folders, tags, counts, trashedCount] = await Promise.all([
-    listResumes(filters),
-    listFolders(),
-    listResumeTags(),
-    getResumeCounts(),
-    countTrashedResumes(),
-  ]);
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
@@ -51,11 +47,12 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
             <ButtonLink href={routes.trash} variant="outline">
               <Trash2 data-icon="inline-start" />
               Trash
-              {trashedCount > 0 ? (
-                <Badge variant="secondary" className="ml-1">
-                  {trashedCount}
-                </Badge>
-              ) : null}
+              {/* Bare `Suspense`, not `AsyncBoundary`: the error fallback is a
+                  full `role="alert"` card, and rendering one inside a link's
+                  label would be worse than showing no count at all. */}
+              <Suspense fallback={null}>
+                <TrashCountBadge />
+              </Suspense>
             </ButtonLink>
             <CreateResumeButton />
           </>
@@ -66,17 +63,24 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
         {/* Above the grid in the DOM, so keyboard and screen-reader users reach
             the folder switcher before the list it filters. */}
         <aside className="lg:sticky lg:top-20 lg:self-start">
-          <FolderNav
-            folders={folders}
-            filters={filters}
-            totalCount={counts.total}
-            unfiledCount={counts.unfiled}
-          />
+          <AsyncBoundary pending={<FolderNavSkeleton />}>
+            <FolderNavSection filters={filters} />
+          </AsyncBoundary>
         </aside>
 
         <div className="min-w-0 space-y-4">
-          <ResumeFilters filters={filters} tags={tags} />
-          <ResumeGrid resumes={resumes} folders={folders} filters={filters} />
+          {/* Unkeyed on purpose: the filter bar owns the focused search input, and
+              remounting it mid-keystroke would take the caret with it. */}
+          <AsyncBoundary pending={<ResumeFiltersSkeleton />}>
+            <ResumeFiltersSection filters={filters} />
+          </AsyncBoundary>
+
+          {/* Keyed, unlike its siblings: a filter change means these results are
+              stale, so the boundary should remount and fall back to the skeleton
+              rather than leave the previous list on screen looking current. */}
+          <AsyncBoundary key={resumeListHref(filters)} pending={<ResumeGridSkeleton />}>
+            <ResumeGridSection filters={filters} />
+          </AsyncBoundary>
         </div>
       </div>
     </div>

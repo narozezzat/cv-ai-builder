@@ -13,6 +13,8 @@
 
 import "server-only";
 
+import { cache } from "react";
+
 import { createSupabaseServerClient } from "@/services/supabase/server";
 import {
   type FolderSummary,
@@ -227,8 +229,12 @@ export async function getResumeForEditor(resumeId: string): Promise<ResumeEditor
  * Two round-trips instead of one: PostgREST can embed a count of a related table,
  * but not a count filtered on the related table's own `deleted_at`, so an embedded
  * count would include trashed resumes and disagree with the grid beside it.
+ *
+ * Memoized per request: the folder rail and the grid's "move to folder" menu suspend
+ * on this independently, and two boundaries wanting the same list must not cost two
+ * pairs of round-trips.
  */
-export async function listFolders(): Promise<FolderSummary[]> {
+export const listFolders = cache(async (): Promise<FolderSummary[]> => {
   const supabase = await createSupabaseServerClient();
 
   const [folders, filed] = await Promise.all([
@@ -274,7 +280,7 @@ export async function listFolders(): Promise<FolderSummary[]> {
     ...folder,
     resumeCount: counts.get(folder.id) ?? 0,
   }));
-}
+});
 
 /**
  * Every tag the user has used, with usage counts, most-used first.
