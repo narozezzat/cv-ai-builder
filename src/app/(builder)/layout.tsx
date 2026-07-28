@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { CommandPaletteProvider } from "@/components/providers/command-palette-provider";
 import { getProfile, parseAppearance, ThemeSync } from "@/features/profile";
 import { requireUser } from "@/services/supabase/server";
 
@@ -23,9 +24,9 @@ export default async function BuilderLayout({ children }: { children: ReactNode 
   const { theme } = parseAppearance(profile?.theme, profile?.locale);
 
   return (
-    <>
+    <CommandPaletteProvider>
       {children}
       <ThemeSync preference={theme} />
-    </>
+    </CommandPaletteProvider>
   );
 }

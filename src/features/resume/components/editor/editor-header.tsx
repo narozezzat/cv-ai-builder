@@ -14,8 +14,10 @@ import { ArrowLeft, History, Redo2, Save, Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import { ButtonLink, IconButton } from "@/components/shared";
+import { useRegisterCommands } from "@/components/providers/command-palette-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useShortcutLabel, useShortcuts } from "@/hooks/use-shortcuts";
 import { routes } from "@/lib/routes";
 
 import { useSaveResume } from "../../hooks/use-save-resume";
@@ -28,6 +30,9 @@ import {
 } from "../../store/resume-store";
 import { SaveStatusIndicator } from "./save-status";
 import { VersionHistoryDialog } from "./version-history-dialog";
+
+const UNDO_COMBO = "mod+z";
+const REDO_COMBO = "shift+mod+z";
 
 export function EditorHeader() {
   const title = useResumeStore((state) => state.draft.title);
@@ -43,6 +48,11 @@ export function EditorHeader() {
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  const undoLabel = useShortcutLabel(UNDO_COMBO);
+  const redoLabel = useShortcutLabel(REDO_COMBO);
+
+  const canSave = isDirty && !saving && status !== "conflict";
+
   async function handleSave(): Promise<void> {
     setSaving(true);
 
@@ -54,6 +64,64 @@ export function EditorHeader() {
       setSaving(false);
     }
   }
+
+  /*
+    Undo and redo are bound here rather than in the store or the shortcut layer,
+    because "the editor is on screen" is the condition — the bindings must disappear
+    with this header, or `⌘Z` on the dashboard would step through resume history.
+
+    `allowInInput: false` is the whole point of the pair: while the caret is in a text
+    field or a rich-text editor, `⌘Z` belongs to that field's own undo stack. Document
+    history steps only once focus is elsewhere, which is also where the user's mental
+    model puts it.
+  */
+  useShortcuts([
+    { combo: REDO_COMBO, handler: redo, allowInInput: false },
+    { combo: UNDO_COMBO, handler: undo, allowInInput: false },
+  ]);
+
+  useRegisterCommands([
+    {
+      id: "resume.save",
+      label: "Save resume",
+      group: "context",
+      keywords: ["write", "persist"],
+      shortcut: "mod+s",
+      icon: <Save aria-hidden />,
+      disabled: !canSave,
+      perform: handleSave,
+    },
+    {
+      id: "resume.undo",
+      label: "Undo",
+      group: "context",
+      shortcut: UNDO_COMBO,
+      icon: <Undo2 aria-hidden />,
+      disabled: !canUndo,
+      // Undo is the one command people run several times in a row, so the palette
+      // stays open and the list's `disabled` state updates as the stack drains.
+      keepOpen: true,
+      perform: undo,
+    },
+    {
+      id: "resume.redo",
+      label: "Redo",
+      group: "context",
+      shortcut: REDO_COMBO,
+      icon: <Redo2 aria-hidden />,
+      disabled: !canRedo,
+      keepOpen: true,
+      perform: redo,
+    },
+    {
+      id: "resume.history",
+      label: "Version history",
+      group: "context",
+      keywords: ["versions", "restore", "revert"],
+      icon: <History aria-hidden />,
+      perform: () => setHistoryOpen(true),
+    },
+  ]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
@@ -82,7 +150,8 @@ export function EditorHeader() {
         <div className="flex shrink-0 items-center gap-0.5">
           <IconButton
             label="Undo"
-            shortcut="⌘Z"
+            // Resolved at runtime: hardcoding `⌘Z` tells a Windows user the wrong key.
+            shortcut={undoLabel ?? undefined}
             icon={<Undo2 aria-hidden className="size-4" />}
             size="icon-sm"
             disabled={!canUndo}
@@ -90,7 +159,7 @@ export function EditorHeader() {
           />
           <IconButton
             label="Redo"
-            shortcut="⇧⌘Z"
+            shortcut={redoLabel ?? undefined}
             icon={<Redo2 aria-hidden className="size-4" />}
             size="icon-sm"
             disabled={!canRedo}
@@ -109,7 +178,7 @@ export function EditorHeader() {
           size="sm"
           // `conflict` is excluded: writing again is exactly what must not happen
           // until the user decides whose version wins.
-          disabled={!isDirty || saving || status === "conflict"}
+          disabled={!canSave}
           onClick={handleSave}
         >
           <Save aria-hidden className="size-3.5" />

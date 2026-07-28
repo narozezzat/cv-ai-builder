@@ -1,4 +1,4 @@
-import { Logo, ThemeToggle } from "@/components/shared";
+import { CommandPaletteTrigger, Logo, ThemeToggle } from "@/components/shared";
 import { UserMenu } from "@/features/profile";
 import { routes } from "@/lib/routes";
 
@@ -39,6 +39,7 @@ export function AppHeader({ fullName, email, avatarUrl }: AppHeaderProps) {
         </div>
 
         <div className="flex items-center gap-1">
+          <CommandPaletteTrigger className="mr-1" />
           <ThemeToggle />
           <UserMenu fullName={fullName} email={email} avatarUrl={avatarUrl} />
         </div>

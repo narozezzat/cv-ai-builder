@@ -33,6 +33,8 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
+import { useShortcuts } from "@/hooks/use-shortcuts";
+
 import type { SnapshotOrigin } from "../schema/resume-schema";
 import { selectDraft, selectIsDirty, useResumeStore } from "../store/resume-store";
 import { useSaveResume } from "./use-save-resume";
@@ -102,17 +104,13 @@ export function useAutosaveResume(): UseAutosaveResumeResult {
     // which must restart the debounce window.
   }, [draft, isDirty, status]);
 
+  // `preventDefault` is the default and is load-bearing here: without it the browser
+  // opens its "save page as" dialog over the editor. `allowInInput` defaults to true
+  // for a `mod` combo, which is what this one needs — the caret is in a field whenever
+  // the shortcut matters.
+  useShortcuts([{ combo: "mod+s", handler: () => void runRef.current("manual") }]);
+
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "s" || !(event.metaKey || event.ctrlKey)) {
-        return;
-      }
-
-      // Otherwise the browser opens its "save page as" dialog over the editor.
-      event.preventDefault();
-      void runRef.current("manual");
-    }
-
     function onVisibilityChange() {
       if (document.visibilityState === "hidden" && isDirtyNow()) {
         void runRef.current();
@@ -125,12 +123,10 @@ export function useAutosaveResume(): UseAutosaveResumeResult {
       }
     }
 
-    window.addEventListener("keydown", onKeyDown);
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("beforeunload", onBeforeUnload);
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
