@@ -44,7 +44,14 @@ export default defineConfig({
   plugins: [react()],
   // `@/*` comes straight from tsconfig — Vite resolves those natively now, so no
   // paths plugin and no second copy of the alias map to keep in step.
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+    alias: {
+      // `next/font/google` only exists after the SWC font transform has run, which
+      // Vitest does not run. See the stub's header.
+      "next/font/google": resolve(import.meta.dirname, "test/stubs/next-font-google.ts"),
+    },
+  },
   test: {
     /**
      * `.env.local` reaches the tests that need it.
