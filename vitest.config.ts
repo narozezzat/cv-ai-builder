@@ -50,6 +50,9 @@ export default defineConfig({
       // `next/font/google` only exists after the SWC font transform has run, which
       // Vitest does not run. See the stub's header.
       "next/font/google": resolve(import.meta.dirname, "test/stubs/next-font-google.ts"),
+      // `server-only` throws outside Next's `react-server` condition, which would
+      // make every `services/` module untestable. See the stub's header.
+      "server-only": resolve(import.meta.dirname, "test/stubs/server-only.ts"),
     },
   },
   test: {
