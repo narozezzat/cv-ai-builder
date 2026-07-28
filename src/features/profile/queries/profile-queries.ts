@@ -10,6 +10,7 @@
 
 import "server-only";
 
+import { cache } from "react";
 import { z } from "zod";
 
 import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
@@ -27,8 +28,13 @@ const PROFILE_COLUMNS =
  * the alternative is a settings page that throws for an account in that state,
  * which is the worst possible moment to lose the ability to look at your account.
  * Callers fall back to the session's own email.
+ *
+ * Memoized per request: the app shell needs it for the header, and the dashboard's
+ * greeting and credits card each suspend on it independently. Without `cache()` that
+ * is three identical round-trips for one render, and the count grows with every
+ * streamed widget that wants a profile field.
  */
-export async function getProfile(): Promise<ProfileRow | null> {
+export const getProfile = cache(async (): Promise<ProfileRow | null> => {
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
 
@@ -45,7 +51,7 @@ export async function getProfile(): Promise<ProfileRow | null> {
   }
 
   return data;
-}
+});
 
 /**
  * Most recent account activity, newest first.

@@ -1,8 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 
-import { ErrorBoundary, type FallbackProps } from "@/components/shared/error-boundary";
+import {
+  ErrorBoundary,
+  ErrorFallback,
+  type FallbackProps,
+} from "@/components/shared/error-boundary";
 
 interface AsyncBoundaryProps {
   children: ReactNode;
@@ -24,7 +29,7 @@ interface AsyncBoundaryProps {
  *
  * @example
  * <AsyncBoundary pending={<ResumeGridSkeleton />}>
- *   <ResumeGrid />
+ *   <ResumeGridSection filters={filters} />
  * </AsyncBoundary>
  */
 export function AsyncBoundary({
@@ -35,8 +40,35 @@ export function AsyncBoundary({
   resetKeys,
 }: AsyncBoundaryProps) {
   return (
-    <ErrorBoundary fallback={fallback} onError={onError} resetKeys={resetKeys}>
+    <ErrorBoundary fallback={fallback ?? renderRetry} onError={onError} resetKeys={resetKeys}>
       <Suspense fallback={pending}>{children}</Suspense>
     </ErrorBoundary>
+  );
+}
+
+function renderRetry(props: FallbackProps) {
+  return <RetryFallback {...props} />;
+}
+
+/**
+ * The default fallback, wrapping `ErrorFallback` so "Try again" actually tries.
+ *
+ * `reset()` alone only clears the boundary's state and re-renders the same children —
+ * which, when the child is a streamed Server Component, is the same already-rejected
+ * payload. The retry has to ask the server for a new one, so it refreshes the route
+ * first. Harmless for client children: a refresh revalidates data they were reading
+ * anyway.
+ */
+function RetryFallback({ error, reset }: FallbackProps) {
+  const router = useRouter();
+
+  return (
+    <ErrorFallback
+      error={error}
+      reset={() => {
+        router.refresh();
+        reset();
+      }}
+    />
   );
 }

@@ -1,14 +1,14 @@
-import { ActivityIcon } from "lucide-react";
 import type { Metadata } from "next";
 
-import { PageHeader, SectionCard } from "@/components/shared";
-import { StatCards } from "@/features/dashboard";
+import { AsyncBoundary } from "@/components/shared";
+import { StatCardsSection, StatCardsSkeleton } from "@/features/dashboard";
 import {
-  ActivityFeed,
-  AiCreditsCard,
-  getDashboardStats,
-  getProfile,
-  getRecentActivity,
+  ActivityFeedSection,
+  ActivityFeedSkeleton,
+  AiCreditsSection,
+  AiCreditsSkeleton,
+  DashboardGreeting,
+  DashboardGreetingSkeleton,
 } from "@/features/profile";
 
 export const metadata: Metadata = {
@@ -19,50 +19,39 @@ export const metadata: Metadata = {
 };
 
 /**
- * First name only, for the greeting.
+ * The dashboard shell — synchronous on purpose.
  *
- * A full legal name in a "Welcome back" line reads like a form letter, and a
- * headline-length `full_name` (users do put credentials in there) would wrap the
- * heading. Falls back to a name-free greeting rather than to "there", which sounds
- * like a mail merge that failed.
+ * Nothing here awaits, so the layout, the header, and the grid structure flush on
+ * the first byte and each widget streams in behind its own boundary. Awaiting the
+ * three reads in the page instead (which is what this used to do) meant the slowest
+ * of them — the activity feed, over a table that grows without ceiling — decided
+ * when *any* of the page appeared.
+ *
+ * Each region gets `AsyncBoundary` rather than a bare `Suspense`, so one failed read
+ * degrades to a retry card in place instead of taking the whole route to
+ * `error.tsx`.
  */
-function firstName(fullName: string | null | undefined): string | null {
-  const first = fullName?.trim().split(/\s+/)[0];
-
-  return first ? first : null;
-}
-
-export default async function DashboardPage() {
-  // Independent reads, so they overlap rather than queue. Two of them resolve the
-  // session, but `getUser()` is memoized per request.
-  const [profile, stats, activity] = await Promise.all([
-    getProfile(),
-    getDashboardStats(),
-    getRecentActivity(6),
-  ]);
-
-  const name = firstName(profile?.full_name);
-
+export default function DashboardPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
-      <PageHeader
-        title={name ? `Welcome back, ${name}` : "Welcome back"}
-        description="Pick up where you left off, or start something new."
-      />
+      <AsyncBoundary pending={<DashboardGreetingSkeleton />}>
+        <DashboardGreeting />
+      </AsyncBoundary>
 
-      <StatCards stats={stats} />
+      <AsyncBoundary pending={<StatCardsSkeleton />}>
+        <StatCardsSection />
+      </AsyncBoundary>
 
       <div className="grid gap-3 lg:grid-cols-3">
-        <SectionCard
-          className="lg:col-span-2"
-          icon={ActivityIcon}
-          title="Recent activity"
-          description="The last few things that happened on your account."
-        >
-          <ActivityFeed items={activity} />
-        </SectionCard>
+        {/* Both children span their own columns, and `AsyncBoundary` renders no DOM
+            of its own, so the grid still sees them as direct children. */}
+        <AsyncBoundary pending={<ActivityFeedSkeleton />}>
+          <ActivityFeedSection />
+        </AsyncBoundary>
 
-        <AiCreditsCard credits={profile?.ai_credits ?? null} />
+        <AsyncBoundary pending={<AiCreditsSkeleton />}>
+          <AiCreditsSection />
+        </AsyncBoundary>
       </div>
     </div>
   );

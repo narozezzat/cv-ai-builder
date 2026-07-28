@@ -34,7 +34,14 @@ const serverEnvSchema = z.object({
     .min(32, "EXPORT_TOKEN_SECRET must be at least 32 characters.")
     .optional(),
 
-  AI_PROVIDER: z.enum(["openai", "anthropic"]).default("openai"),
+  /**
+   * Google is the default because it is the only one of the three with a real
+   * free tier, which is what the project needs for development and for users who
+   * never upgrade. `.env.example` ships `google`; keep the two in step — a value
+   * this enum rejects fails the build at page-data collection, not at first use.
+   */
+  AI_PROVIDER: z.enum(["google", "openai", "anthropic"]).default("google"),
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(20).optional(),
   OPENAI_API_KEY: z.string().startsWith("sk-", "OPENAI_API_KEY must start with 'sk-'.").optional(),
   ANTHROPIC_API_KEY: z.string().min(20).optional(),
 
@@ -52,11 +59,22 @@ if (!parsed.success) {
 
 export const serverEnv = parsed.data;
 
-/** True when the configured AI provider actually has a key. */
+/**
+ * True when the configured AI provider actually has a key.
+ *
+ * Checks only the *configured* provider: holding an OpenAI key while
+ * `AI_PROVIDER=google` is not a working setup, and reporting it as one would move
+ * the failure from a disabled button to a 401 mid-generation.
+ */
 export function isAiConfigured(): boolean {
-  return serverEnv.AI_PROVIDER === "anthropic"
-    ? Boolean(serverEnv.ANTHROPIC_API_KEY)
-    : Boolean(serverEnv.OPENAI_API_KEY);
+  switch (serverEnv.AI_PROVIDER) {
+    case "anthropic":
+      return Boolean(serverEnv.ANTHROPIC_API_KEY);
+    case "openai":
+      return Boolean(serverEnv.OPENAI_API_KEY);
+    default:
+      return Boolean(serverEnv.GOOGLE_GENERATIVE_AI_API_KEY);
+  }
 }
 
 /**
