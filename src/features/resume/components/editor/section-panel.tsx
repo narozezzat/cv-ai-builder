@@ -29,7 +29,8 @@ import { RESUME_LIMITS, SECTION_KIND_LABELS, type ResumeSection } from "@/types/
 
 import { RESUME_TITLE_MAX } from "../../schema/resume-schema";
 import { useResumeStore } from "../../store/resume-store";
-import { TextAreaField, TextField } from "./editor-fields";
+import { TextField } from "./editor-fields";
+import { RichTextField } from "./rich-text-field";
 import { ITEM_EMPTY_HINTS, ITEM_NOUNS, ItemFields, summarizeItem } from "./item-fields";
 import { RepeatableSection } from "./repeatable-section";
 import { SortableHandle, SortableRow } from "./sortable-list";
@@ -128,11 +129,10 @@ export function SectionPanel({ section }: SectionPanelProps) {
               />
 
               {section.kind === "summary" ? (
-                <TextAreaField
+                <RichTextField
                   label="Summary"
                   value={section.content}
                   maxLength={RESUME_LIMITS.sectionRichText}
-                  rows={6}
                   placeholder="Three or four lines: what you do, how long you have done it, and the thing you are best at. Written for the specific job where possible."
                   onChange={(content) => setSummary(section.id, content)}
                 />

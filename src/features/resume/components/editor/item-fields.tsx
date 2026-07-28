@@ -40,15 +40,9 @@ import {
 } from "@/types/resume";
 
 import { useResumeStore } from "../../store/resume-store";
-import {
-  DateField,
-  FieldGrid,
-  SelectField,
-  SwitchField,
-  TextAreaField,
-  TextField,
-} from "./editor-fields";
+import { DateField, FieldGrid, SelectField, SwitchField, TextField } from "./editor-fields";
 import { BulletListField, KeywordListField } from "./list-fields";
+import { RichTextField } from "./rich-text-field";
 
 /** `{ value, label }` pairs for a `Record`-backed vocabulary. */
 function optionsFrom<TKey extends string>(
@@ -132,7 +126,7 @@ export function ExperienceFields({ sectionId, item }: ItemFieldsProps<Experience
         onChange={(current) => patch({ current })}
       />
 
-      <TextAreaField
+      <RichTextField
         label="Summary"
         value={item.summary}
         maxLength={RESUME_LIMITS.itemRichText}
@@ -222,7 +216,7 @@ export function EducationFields({ sectionId, item }: ItemFieldsProps<EducationIt
         onChange={(current) => patch({ current })}
       />
 
-      <TextAreaField
+      <RichTextField
         label="Summary"
         value={item.summary}
         maxLength={RESUME_LIMITS.itemRichText}
@@ -296,7 +290,7 @@ export function ProjectFields({ sectionId, item }: ItemFieldsProps<ProjectItem>)
         />
       </FieldGrid>
 
-      <TextAreaField
+      <RichTextField
         label="Description"
         value={item.description}
         maxLength={RESUME_LIMITS.itemRichText}
@@ -490,7 +484,7 @@ export function AwardFields({ sectionId, item }: ItemFieldsProps<AwardItem>) {
         <DateField label="Date" value={item.date} onChange={(date) => patch({ date }, "date")} />
       </FieldGrid>
 
-      <TextAreaField
+      <RichTextField
         label="Summary"
         value={item.summary}
         maxLength={RESUME_LIMITS.itemRichText}
@@ -541,7 +535,7 @@ export function PublicationFields({ sectionId, item }: ItemFieldsProps<Publicati
         />
       </FieldGrid>
 
-      <TextAreaField
+      <RichTextField
         label="Summary"
         value={item.summary}
         maxLength={RESUME_LIMITS.itemRichText}
@@ -598,7 +592,7 @@ export function ReferenceFields({ sectionId, item }: ItemFieldsProps<ReferenceIt
         />
       </FieldGrid>
 
-      <TextAreaField
+      <RichTextField
         label="Note"
         value={item.summary}
         maxLength={RESUME_LIMITS.itemRichText}
@@ -674,7 +668,7 @@ export function CustomFields({ sectionId, item }: ItemFieldsProps<CustomItem>) {
         />
       </FieldGrid>
 
-      <TextAreaField
+      <RichTextField
         label="Description"
         value={item.description}
         maxLength={RESUME_LIMITS.itemRichText}

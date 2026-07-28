@@ -18,6 +18,9 @@
  * 4. Nothing here writes `view_count`, `download_count`, `share_slug`, or
  *    `visibility`. Counters are incremented by definer functions and sharing is
  *    its own surface, so a compromised form on this path cannot publish a resume.
+ * 5. The document's rich-text fields go through `sanitizeResumeDocument` before the
+ *    row is written. Zod bounds their length; it does not read the HTML, and the
+ *    editor's schema is client-side. This is where that markup becomes trusted.
  */
 
 import { revalidatePath } from "next/cache";
@@ -33,6 +36,7 @@ import { PG_ERROR, type ActivityLogInsert, type ResumeUpdate } from "@/types/db"
 import { createResumeDocument, type ResumeDocument } from "@/types/resume";
 
 import { RESUME_RATE_LIMITS } from "../lib/rate-limits";
+import { sanitizeResumeDocument } from "../lib/sanitize-document";
 import {
   RESUME_TITLE_MAX,
   createFolderSchema,
@@ -743,8 +747,11 @@ export async function saveResumeAction(input: SaveResumeInput): Promise<SaveResu
       template_id: templateId,
       // The parsed document, not the raw input: defaults are applied and unknown
       // keys are gone, so what lands in `content` is exactly what the reshred
-      // trigger and the renderer know how to read.
-      content: document satisfies ResumeDocument,
+      // trigger and the renderer know how to read. Sanitized on top of that,
+      // because the schema bounds the rich-text fields' length without looking
+      // inside the HTML — this is the last point before that HTML becomes stored
+      // markup the templates, the printer, and the public share page all render.
+      content: sanitizeResumeDocument(document) satisfies ResumeDocument,
       theme,
       page,
       ...touched(),
