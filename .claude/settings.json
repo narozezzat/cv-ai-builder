@@ -94,7 +94,17 @@
       "Bash(CI=1 PORT=3100 pnpm test:e2e --project=mobile-safari e2e/landing.spec.ts)",
       "Bash(awk 'NR>=1 && /saveResumeAction/{print NR\": \"$0}' src/features/resume/actions/resume-actions.ts)",
       "Bash(perl -i -pe 's/^AI_PROVIDER=.*$/AI_PROVIDER=google/; s/^\\(OPENAI_API_KEY=.*\\)$/GOOGLE_GENERATIVE_AI_API_KEY=\\\\n$1/' .env.local)",
-      "Bash(perl -pe 's/\\(=\\)\\(.+\\)$/\"=\".\\(\"*\" x length\\($2\\)\\)/e')"
+      "Bash(perl -pe 's/\\(=\\)\\(.+\\)$/\"=\".\\(\"*\" x length\\($2\\)\\)/e')",
+      "Bash(awk -F= '/^GOOGLE_GENERATIVE_AI_API_KEY=/{print \"GOOGLE_GENERATIVE_AI_API_KEY chars: \" length\\($2\\)} /^AI_PROVIDER=/{print \"AI_PROVIDER: \" $2}' .env.local)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.entries\\({...p.dependencies,...p.devDependencies}\\).filter\\(\\([k]\\)=>/^\\(ai|@ai-sdk|zod|cmdk|@tiptap\\)/.test\\(k\\)\\).map\\(x=>x.join\\(' '\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(p.version, JSON.stringify\\(p.exports,null,1\\)\\)\")",
+      "Bash(node -e \"import\\('ai'\\).then\\(m=>console.log\\(Object.keys\\(m\\).filter\\(k=>/^\\(generate|stream|Output|NoObject|APICall|customProvider|createProviderRegistry|wrapLanguageModel|isStepCount|Invalid\\)/i.test\\(k\\)\\).sort\\(\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(node -e \"import\\('@ai-sdk/google'\\).then\\(m=>console.log\\(Object.keys\\(m\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(node -e \"import\\('@ai-sdk/openai'\\).then\\(m=>console.log\\(Object.keys\\(m\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(node -e \"import\\('@ai-sdk/anthropic'\\).then\\(m=>console.log\\(Object.keys\\(m\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\({ai:p.dependencies.ai,g:p.dependencies['@ai-sdk/google'],o:p.dependencies['@ai-sdk/openai'],a:p.dependencies['@ai-sdk/anthropic']}\\)\\)\")",
+      "Bash(awk 'NR>=4334 && NR<=4560 && /output/' node_modules/ai/dist/index.d.ts)",
+      "Bash(awk -F: '$1>4334 && $1<4560')"
     ],
     "additionalDirectories": [
       "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/supabase/migrations",

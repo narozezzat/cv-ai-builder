@@ -45,6 +45,14 @@ const serverEnvSchema = z.object({
   OPENAI_API_KEY: z.string().startsWith("sk-", "OPENAI_API_KEY must start with 'sk-'.").optional(),
   ANTHROPIC_API_KEY: z.string().min(20).optional(),
 
+  /**
+   * Model overrides, one per tier. Present so a model can be retired or upgraded
+   * by changing an environment variable instead of shipping code — the defaults in
+   * `services/ai/provider.ts` are the fallback, not the only option.
+   */
+  AI_MODEL_FAST: z.string().min(1).optional(),
+  AI_MODEL_QUALITY: z.string().min(1).optional(),
+
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   GITHUB_CLIENT_ID: z.string().min(1).optional(),
