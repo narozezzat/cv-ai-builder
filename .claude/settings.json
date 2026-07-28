@@ -70,10 +70,29 @@
       "Bash(node --env-file=.env.local verify-dnd.mjs)",
       "Bash(curl -s -o /dev/null -w \"login:%{http_code}\\\\n\" http://localhost:3100/login)",
       "Bash(lsof -ti:3100)",
-      "Bash(node --env-file=.env.local verify-dnd2.mjs)"
+      "Bash(node --env-file=.env.local verify-dnd2.mjs)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.keys\\(p.dependencies\\).join\\('\\\\n'\\)\\);console.log\\('--dev--'\\);console.log\\(Object.keys\\(p.devDependencies\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/ssr/package.json'\\).dependencies\\)\")",
+      "Bash(node -e \"const s=require\\('@supabase/supabase-js'\\);console.log\\(Object.keys\\(s\\).filter\\(k=>/Auth|Error/.test\\(k\\)\\)\\)\")",
+      "Bash(git pull *)",
+      "Bash(curl -s -o /dev/null -w '%{http_code} %{url_effective}\\\\n' -L --max-time 8 https://reforge.app)",
+      "Bash(curl -s -L --max-time 10 https://reforge.app)",
+      "Bash(curl -s -D /tmp/h.txt https://cv-ai-builder-theta.vercel.app/login -o /tmp/login.html)",
+      "Bash(grep -rhoE 'createServerReference\\\\\\)?\\\\\\(\"[0-9a-f]{40,}\"[^\\)]{0,80}' chunks/)",
+      "Bash(grep -oE '\"[0-9a-f]{40,}\"' /tmp/login.html)",
+      "Bash(vercel whoami *)",
+      "Bash(cd /Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.keys\\({...p.dependencies,...p.devDependencies}\\).filter\\(k=>/tiptap|sanitize/.test\\(k\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.entries\\({...p.dependencies,...p.devDependencies}\\).filter\\(\\([k]\\)=>/tiptap|sanitize|prosemirror/.test\\(k\\)\\)\\)\")",
+      "Bash(perl -0pi -e 's/<TextAreaField\\\\b/<RichTextField/g' src/features/resume/components/editor/item-fields.tsx)",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('@tiptap/pm/state'\\)\\).slice\\(0,12\\)\\)\")",
+      "Bash(lsof -ti:3000 -ti:3100)",
+      "Bash(lsof -nP -iTCP:3100 -sTCP:LISTEN)",
+      "Bash(ps -o command= -p 34212)"
     ],
     "additionalDirectories": [
-      "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/supabase/migrations"
+      "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/supabase/migrations",
+      "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/src/services/rate-limit"
     ]
   }
 }
