@@ -28,11 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { RESUME_DATE_PATTERN } from "@/types/resume";
 
-interface FieldShellProps {
+export interface FieldShellProps {
   id: string;
   label: string;
   /** Helper text. Rendered before any error so the two never swap places. */
@@ -42,11 +41,19 @@ interface FieldShellProps {
   children: ReactNode;
 }
 
-/** Label, control, hint, error — wired together with the ids assistive tech needs. */
-function FieldShell({ id, label, hint, error, className, children }: FieldShellProps) {
+/**
+ * Label, control, hint, error — wired together with the ids assistive tech needs.
+ *
+ * Exported for the rich-text field, which is not a plain input but has to look and
+ * announce identically to the ones here.
+ */
+export function FieldShell({ id, label, hint, error, className, children }: FieldShellProps) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+      {/* `id` on the label as well as `htmlFor`: the rich-text field's control is a
+          contenteditable div, which `htmlFor` cannot target, so it names itself with
+          `aria-labelledby` pointing here. */}
+      <Label id={`${id}-label`} htmlFor={id} className="text-xs font-medium text-muted-foreground">
         {label}
       </Label>
 
@@ -67,7 +74,7 @@ function FieldShell({ id, label, hint, error, className, children }: FieldShellP
   );
 }
 
-function describedBy(id: string, hint?: string, error?: string): string | undefined {
+export function describedBy(id: string, hint?: string, error?: string): string | undefined {
   return (
     [hint ? `${id}-hint` : null, error ? `${id}-error` : null].filter(Boolean).join(" ") ||
     undefined
@@ -109,48 +116,6 @@ export function TextField({
         maxLength={maxLength}
         autoComplete={autoComplete}
         aria-describedby={describedBy(id, hint)}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </FieldShell>
-  );
-}
-
-interface TextAreaFieldProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  maxLength: number;
-  rows?: number;
-  hint?: string;
-  className?: string;
-}
-
-export function TextAreaField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  maxLength,
-  rows = 4,
-  hint,
-  className,
-}: TextAreaFieldProps) {
-  const id = useId();
-  const remaining = maxLength - value.length;
-  // Counter only near the ceiling: a permanent one on every description reads as a
-  // constraint the user is being asked to work around.
-  const shownHint = remaining <= 200 ? `${remaining} characters left` : hint;
-
-  return (
-    <FieldShell id={id} label={label} hint={shownHint} className={className}>
-      <Textarea
-        id={id}
-        value={value}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        rows={rows}
-        aria-describedby={describedBy(id, shownHint)}
         onChange={(event) => onChange(event.target.value)}
       />
     </FieldShell>
