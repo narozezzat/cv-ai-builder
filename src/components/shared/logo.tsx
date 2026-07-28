@@ -39,10 +39,12 @@ export function Logo({
   className,
   href = routes.home,
   showWordmark = true,
+  wordmarkClassName,
 }: {
   className?: string;
   href?: string;
   showWordmark?: boolean;
+  wordmarkClassName?: string;
 }) {
   return (
     <Link
@@ -54,7 +56,9 @@ export function Logo({
     >
       <LogoMark className="transition-transform duration-300 group-hover:scale-105" />
       {showWordmark ? (
-        <span className="text-[1.0625rem] font-semibold tracking-tight">{siteConfig.name}</span>
+        <span className={cn("text-[1.0625rem] font-semibold tracking-tight", wordmarkClassName)}>
+          {siteConfig.name}
+        </span>
       ) : (
         <span className="sr-only">{siteConfig.name}</span>
       )}

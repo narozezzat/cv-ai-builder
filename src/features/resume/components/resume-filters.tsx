@@ -89,7 +89,7 @@ export function ResumeFilters({ filters, tags }: ResumeFiltersProps) {
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <InputGroup className="sm:max-w-xs">
+      <InputGroup className="rounded-full bg-card/60 shadow-xs backdrop-blur-xs transition-all duration-200 sm:max-w-xs">
         <InputGroupAddon>
           {pending ? <Loader2 className="animate-spin" /> : <Search />}
         </InputGroupAddon>

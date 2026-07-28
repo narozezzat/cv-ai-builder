@@ -27,7 +27,7 @@ export function AppNav() {
 
   return (
     <nav aria-label="App sections">
-      <ul className="flex gap-1 overflow-x-auto">
+      <ul className="scrollbar-none flex items-center gap-1 overflow-x-auto">
         {ITEMS.map((item) => {
           // `/dashboard` is an ancestor of `/dashboard/resumes`, so `startsWith`
           // would light both up. Overview matches exactly; the others own their
@@ -43,9 +43,9 @@ export function AppNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "block rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  "block rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-3 sm:py-1.5 sm:text-sm",
                   active
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-accent font-semibold text-accent-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >

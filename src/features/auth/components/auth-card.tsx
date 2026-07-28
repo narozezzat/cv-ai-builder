@@ -32,13 +32,19 @@ export function AuthCard({
     <FadeUp className="w-full max-w-md">
       <section
         className={cn(
-          "rounded-2xl border border-border/60 p-6 shadow-lg glass sm:p-8",
-          "supports-backdrop-filter:bg-background/70",
+          "relative overflow-hidden rounded-2xl border border-border/70 p-6 shadow-xl glass transition-all duration-300 sm:p-8",
+          "supports-backdrop-filter:bg-background/80",
           className,
         )}
       >
+        {/* Top ambient brand glow line */}
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 left-0 h-1 bg-linear-to-r from-brand/20 via-brand to-brand/20"
+        />
+
         <header className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-balance">{title}</h1>
           {description ? (
             <p className="text-sm text-pretty text-muted-foreground">{description}</p>
           ) : null}

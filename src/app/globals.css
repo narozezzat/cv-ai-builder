@@ -234,7 +234,7 @@
   /* Visible focus for keyboard users only — mouse clicks stay clean.
      WCAG 2.4.7. */
   :focus-visible {
-    @apply ring-2 ring-ring/60 ring-offset-2 ring-offset-background outline-none;
+    @apply ring-2 ring-ring/40 outline-none;
   }
 
   ::selection {
