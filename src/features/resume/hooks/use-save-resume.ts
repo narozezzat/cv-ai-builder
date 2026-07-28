@@ -24,11 +24,19 @@
  *    user has opened a different resume — and `markSaved` would then install one
  *    resume's snapshot and `updated_at` on another, which is a silent data-loss bug
  *    the next save turns into a phantom conflict.
+ *
+ * 4. **The version snapshot is requested after the write, and never awaited.** History
+ *    is a safety net, not part of the save: a snapshot that fails must not turn a
+ *    successful save into an error, and waiting on a second round-trip would double
+ *    the time the editor spends in `saving`. Whether the snapshot is actually stored is
+ *    the server's call — `createResumeVersionAction` drops one that duplicates the
+ *    newest, and throttles the autosave ones.
  */
 
 import { useCallback, useRef } from "react";
 
-import { saveResumeAction } from "../actions/resume-actions";
+import { createResumeVersionAction, saveResumeAction } from "../actions/resume-actions";
+import type { SnapshotOrigin } from "../schema/resume-schema";
 import { useResumeStore } from "../store/resume-store";
 
 /**
@@ -41,9 +49,29 @@ function current(resumeId: string) {
   return state.resumeId === resumeId ? state : undefined;
 }
 
+/**
+ * Asks for a snapshot of the row as it now stands, and swallows every failure.
+ *
+ * Not awaited by the caller: history is a safety net around the save, not a step
+ * inside it. `void` on the promise plus a `catch` is what keeps a rejected action
+ * from surfacing as an unhandled rejection in the console.
+ */
+function requestSnapshot(resumeId: string, origin: SnapshotOrigin): void {
+  void createResumeVersionAction({ resumeId, origin }).catch((error: unknown) => {
+    console.error("[resume] snapshot threw", error);
+  });
+}
+
 export interface UseSaveResumeResult {
-  /** Resolves `true` when the row was written. Safe to call when nothing is dirty. */
-  save: () => Promise<boolean>;
+  /**
+   * Resolves `true` when the row was written. Safe to call when nothing is dirty.
+   *
+   * `origin` labels the version snapshot the save leaves behind — `"manual"` for the
+   * Save button and `Cmd/Ctrl+S`, `"autosave"` for the debounce. It is not cosmetic:
+   * the server only enforces a minimum gap between `"autosave"` snapshots, so a
+   * deliberate save is never throttled and a keystroke storm never fills the history.
+   */
+  save: (origin?: SnapshotOrigin) => Promise<boolean>;
 }
 
 export function useSaveResume(): UseSaveResumeResult {
@@ -54,7 +82,7 @@ export function useSaveResume(): UseSaveResumeResult {
    */
   const inFlight = useRef(false);
 
-  const save = useCallback(async (): Promise<boolean> => {
+  const save = useCallback(async (origin: SnapshotOrigin = "autosave"): Promise<boolean> => {
     const state = useResumeStore.getState();
     const { resumeId, savedAt, draft } = state;
 
@@ -87,6 +115,10 @@ export function useSaveResume(): UseSaveResumeResult {
       if (result.status === "saved") {
         // Still reported as written even if the editor moved on: the row *was* saved.
         store?.markSaved({ draft, savedAt: result.savedAt });
+        // Snapshots the row that was just written, so it is requested even when the
+        // editor has since navigated away — the point of history is the version that
+        // exists, not the tab that asked for it.
+        requestSnapshot(resumeId, origin);
 
         return true;
       }

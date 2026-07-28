@@ -181,6 +181,70 @@ export const saveResumeSchema = z.object({
 
 export type SaveResumeInput = z.infer<typeof saveResumeSchema>;
 
+// ── Version history ───────────────────────────────────────────────────────────
+//
+// No document ever crosses this boundary. A snapshot is taken from the row the
+// server just read, and a restore returns a document the server read — so the
+// client cannot write history, only ask for it. That is why none of these schemas
+// carry `content`.
+
+/** Mirrors `check (char_length(label) <= 120)` on `resume_versions.label`. */
+export const VERSION_LABEL_MAX = 120;
+
+export const resumeVersionIdSchema = z.uuid("That version id is not valid.");
+
+export const versionLabelSchema = z
+  .string()
+  .trim()
+  .max(VERSION_LABEL_MAX, `A label must be ${VERSION_LABEL_MAX} characters or fewer.`);
+
+/**
+ * The origins a client is allowed to claim.
+ *
+ * The column also permits `ai`, `import`, and `restore`, but those are written by
+ * the code that performs the act — a caller that could name itself `restore` could
+ * forge the one entry in the history the user relies on to undo a restore.
+ */
+export const SNAPSHOT_ORIGINS = ["manual", "autosave"] as const;
+export type SnapshotOrigin = (typeof SNAPSHOT_ORIGINS)[number];
+
+/**
+ * Every origin the column accepts, and how the history list names it.
+ *
+ * Wider than `SNAPSHOT_ORIGINS` because reading is not writing: the list has to
+ * label an entry the server wrote, and an unknown value must still render — hence
+ * the reader below rather than an enum parse that would drop the row.
+ */
+export const VERSION_ORIGINS = ["manual", "autosave", "ai", "import", "restore"] as const;
+export type VersionOrigin = (typeof VERSION_ORIGINS)[number];
+
+export const VERSION_ORIGIN_LABELS: Record<VersionOrigin, string> = {
+  manual: "Saved",
+  autosave: "Autosaved",
+  ai: "AI edit",
+  import: "Imported",
+  restore: "Before restore",
+};
+
+export function readVersionOrigin(value: unknown): VersionOrigin {
+  return VERSION_ORIGINS.includes(value as VersionOrigin) ? (value as VersionOrigin) : "manual";
+}
+
+export const createResumeVersionSchema = z.object({
+  resumeId: resumeIdSchema,
+  origin: z.enum(SNAPSHOT_ORIGINS).default("manual"),
+  label: versionLabelSchema.default(""),
+});
+
+export type CreateResumeVersionInput = z.input<typeof createResumeVersionSchema>;
+
+export const resumeVersionTargetSchema = z.object({
+  resumeId: resumeIdSchema,
+  versionId: resumeVersionIdSchema,
+});
+
+export type ResumeVersionTargetInput = z.infer<typeof resumeVersionTargetSchema>;
+
 // ── Folders ───────────────────────────────────────────────────────────────────
 
 export const createFolderSchema = z.object({

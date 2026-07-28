@@ -10,7 +10,7 @@
  * together.
  */
 
-import { ArrowLeft, Redo2, Save, Undo2 } from "lucide-react";
+import { ArrowLeft, History, Redo2, Save, Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import { ButtonLink, IconButton } from "@/components/shared";
@@ -27,6 +27,7 @@ import {
   useResumeStore,
 } from "../../store/resume-store";
 import { SaveStatusIndicator } from "./save-status";
+import { VersionHistoryDialog } from "./version-history-dialog";
 
 export function EditorHeader() {
   const title = useResumeStore((state) => state.draft.title);
@@ -40,12 +41,15 @@ export function EditorHeader() {
 
   const { save } = useSaveResume();
   const [saving, setSaving] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   async function handleSave(): Promise<void> {
     setSaving(true);
 
     try {
-      await save();
+      // `"manual"` so the snapshot this leaves behind is never throttled: pressing Save
+      // is the user asking for a point they can come back to.
+      await save("manual");
     } finally {
       setSaving(false);
     }
@@ -92,6 +96,12 @@ export function EditorHeader() {
             disabled={!canRedo}
             onClick={redo}
           />
+          <IconButton
+            label="Version history"
+            icon={<History aria-hidden className="size-4" />}
+            size="icon-sm"
+            onClick={() => setHistoryOpen(true)}
+          />
         </div>
 
         <Button
@@ -106,6 +116,13 @@ export function EditorHeader() {
           <span className="hidden sm:inline">Save</span>
         </Button>
       </div>
+
+      {/*
+        Mounted here rather than at the trigger so the popup is not a child of the
+        button row — a dialog inside a flex row of controls inherits its gap and
+        shrink rules the moment it renders anything inline.
+      */}
+      <VersionHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </header>
   );
 }

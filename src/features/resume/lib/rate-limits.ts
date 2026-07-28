@@ -24,4 +24,11 @@ export const RESUME_RATE_LIMITS = {
   delete: { action: "resume.delete", window: "1 hour", max: 30 },
   /** Folder create, rename, delete. */
   folder: { action: "resume.folder", window: "1 hour", max: 60 },
+  /**
+   * Snapshots and restores. Each snapshot copies a whole document into a second
+   * row, so this is the write with the largest storage cost per call — but the
+   * real throttle is the minimum gap enforced on autosave snapshots server-side;
+   * this limit only bounds a client that ignores the answer and keeps asking.
+   */
+  version: { action: "resume.version", window: "1 hour", max: 120 },
 } satisfies Record<string, RateLimitRule>;

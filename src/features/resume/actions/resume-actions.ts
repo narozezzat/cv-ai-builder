@@ -31,28 +31,39 @@ import { getRequestContext, rateLimitSubject } from "@/lib/request";
 import { routes } from "@/lib/routes";
 import { enforceRateLimit, RATE_LIMITED_MESSAGE, type RateLimitRule } from "@/services/rate-limit";
 import { logActivity } from "@/services/supabase/admin";
-import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
+import {
+  createSupabaseServerClient,
+  requireUser,
+  type SupabaseServerClient,
+} from "@/services/supabase/server";
 import { PG_ERROR, type ActivityLogInsert, type ResumeUpdate } from "@/types/db";
-import { createResumeDocument, type ResumeDocument } from "@/types/resume";
+import { createResumeDocument, readResumeDocument, type ResumeDocument } from "@/types/resume";
 
+import { isSameDocument } from "../lib/diff-document";
 import { RESUME_RATE_LIMITS } from "../lib/rate-limits";
 import { sanitizeResumeDocument } from "../lib/sanitize-document";
 import {
   RESUME_TITLE_MAX,
   createFolderSchema,
   createResumeSchema,
+  createResumeVersionSchema,
   deleteFolderSchema,
   duplicateResumeSchema,
   moveResumeSchema,
+  readVersionOrigin,
   renameFolderSchema,
   renameResumeSchema,
   resumeTargetSchema,
+  resumeVersionTargetSchema,
   saveResumeSchema,
   setResumeFavoriteSchema,
   setResumeTagsSchema,
   type CreateResumeInput,
+  type CreateResumeVersionInput,
   type RenameResumeInput,
+  type ResumeVersionTargetInput,
   type SaveResumeInput,
+  type VersionOrigin,
 } from "../schema/resume-schema";
 
 const SAVE_FAILED = "Could not save your changes. Try again.";
@@ -790,6 +801,466 @@ export async function saveResumeAction(input: SaveResumeInput): Promise<SaveResu
   }
 
   return { status: "conflict" };
+}
+
+// ── Version history ───────────────────────────────────────────────────────────
+//
+// Four actions rather than four query functions, because the history dialog is a
+// client component: it opens on demand, and a Server Component cannot fetch on a
+// button press. That makes reads public endpoints too, so both of them re-parse
+// their input and rely on RLS for the row filter exactly as the writes do.
+//
+// The client never sends a document on this path. A snapshot copies `content`
+// straight out of the row the server just read, and a restore returns a document
+// the server read — so history cannot be forged, only requested.
+
+/**
+ * Snapshots kept per resume; older ones are pruned as new ones land.
+ *
+ * A cap rather than a retention window: the user's mental model is "the last few
+ * versions", and time-based expiry deletes the snapshot from before the holiday
+ * precisely because it was the last safe point.
+ */
+const MAX_VERSIONS_PER_RESUME = 30;
+
+/**
+ * Minimum gap between two `autosave` snapshots of one resume.
+ *
+ * Autosave fires every 1.5s while typing. Without this, thirty snapshots of one
+ * paragraph would evict every meaningful version in under a minute — the history
+ * would be technically full and practically empty.
+ */
+const AUTOSAVE_SNAPSHOT_GAP_MS = 2 * 60 * 1000;
+
+const VERSION_FIELDS = "id, version, label, origin, created_at";
+
+/** History metadata. Never carries `content`: the list renders hundreds of rows. */
+export interface ResumeVersionSummary {
+  id: string;
+  version: number;
+  label: string;
+  origin: VersionOrigin;
+  createdAt: string;
+}
+
+export type ListResumeVersionsResult =
+  { status: "ok"; versions: ResumeVersionSummary[] } | { status: "error"; message: string };
+
+export type ReadResumeVersionResult =
+  | { status: "ok"; version: ResumeVersionSummary; document: ResumeDocument }
+  | { status: "error"; message: string };
+
+export type CreateResumeVersionResult =
+  | { status: "created"; version: ResumeVersionSummary }
+  /** Nothing changed since the newest snapshot, or the autosave gap has not elapsed. */
+  | { status: "skipped" }
+  | { status: "error"; message: string };
+
+export type RestoreResumeVersionResult =
+  | { status: "ok"; document: ResumeDocument; snapshotOf: number }
+  /** The stored version already matches what is open, so there is nothing to apply. */
+  | { status: "unchanged" }
+  | { status: "error"; message: string };
+
+const VERSION_FAILED = "Could not reach the version history. Try again.";
+const VERSION_NOT_FOUND = "That version could not be found.";
+const VERSION_UNREADABLE = "That version was saved in a format this editor cannot read.";
+
+type VersionRow = {
+  id: string;
+  version: number;
+  label: string | null;
+  origin: string;
+  created_at: string;
+};
+
+function toVersionSummary(row: VersionRow): ResumeVersionSummary {
+  return {
+    id: row.id,
+    version: row.version,
+    // `label` is nullable in the column and always a string in the UI, so the
+    // "no label" case is resolved once, here, instead of in every consumer.
+    label: row.label ?? "",
+    origin: readVersionOrigin(row.origin),
+    createdAt: row.created_at,
+  };
+}
+
+/**
+ * Reads the resume's current document, or the reason it cannot be read.
+ *
+ * Both snapshot and restore need this: one to copy the document into history, the
+ * other to record what the user is about to overwrite. Neither may proceed on an
+ * unparseable row — snapshotting one would store the corruption, and restoring
+ * over it would destroy the only copy of whatever the row actually holds.
+ */
+async function readCurrentDocument(
+  supabase: SupabaseServerClient,
+  resumeId: string,
+): Promise<{ ok: true; document: ResumeDocument } | { ok: false; message: string }> {
+  const { data, error } = await supabase
+    .from("resumes")
+    .select("content, deleted_at")
+    .eq("id", resumeId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[resume] version read failed", { code: error.code, message: error.message });
+
+    return { ok: false, message: VERSION_FAILED };
+  }
+
+  if (!data) {
+    return { ok: false, message: NOT_FOUND };
+  }
+
+  if (data.deleted_at !== null) {
+    return {
+      ok: false,
+      message: "This resume is in the trash. Restore it to use version history.",
+    };
+  }
+
+  const document = readResumeDocument(data.content);
+
+  if (!document.ok) {
+    console.error("[resume] stored document failed validation", {
+      resumeId,
+      issues: document.issues,
+    });
+
+    return { ok: false, message: "This resume could not be read, so it cannot be snapshotted." };
+  }
+
+  return { ok: true, document: document.document };
+}
+
+/**
+ * Drops everything older than the newest `MAX_VERSIONS_PER_RESUME` snapshots.
+ *
+ * Deletes by version number rather than by id list: `version` is assigned inside
+ * the insert by `assign_resume_version()`, so it is monotonic per resume and a
+ * single `lte` covers rows that appeared while this function was running. Failure
+ * is logged and swallowed — an un-pruned history is untidy, and turning that into
+ * a failed snapshot would lose the version the user asked for.
+ */
+async function pruneResumeVersions(
+  supabase: SupabaseServerClient,
+  resumeId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("resume_versions")
+    .select("version")
+    .eq("resume_id", resumeId)
+    .order("version", { ascending: false })
+    // The row one past the cap, if it exists: its version is the cutoff.
+    .range(MAX_VERSIONS_PER_RESUME, MAX_VERSIONS_PER_RESUME);
+
+  if (error) {
+    console.error("[resume] version prune scan failed", { code: error.code });
+
+    return;
+  }
+
+  const cutoff = data?.[0]?.version;
+
+  if (cutoff === undefined) {
+    return;
+  }
+
+  const { error: deleteError } = await supabase
+    .from("resume_versions")
+    .delete()
+    .eq("resume_id", resumeId)
+    .lte("version", cutoff);
+
+  if (deleteError) {
+    console.error("[resume] version prune failed", { code: deleteError.code });
+  }
+}
+
+/** The newest snapshot with its document, used to decide whether a new one is worth storing. */
+async function readNewestVersion(
+  supabase: SupabaseServerClient,
+  resumeId: string,
+): Promise<{ createdAt: string; document: ResumeDocument } | null> {
+  const { data, error } = await supabase
+    .from("resume_versions")
+    .select("content, created_at")
+    .eq("resume_id", resumeId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const document = readResumeDocument(data.content);
+
+  // An unreadable newest snapshot is treated as "no snapshot", so the next one
+  // still gets stored instead of the history freezing on a bad row.
+  return document.ok ? { createdAt: data.created_at, document: document.document } : null;
+}
+
+/** History metadata for one resume, newest first. */
+export async function listResumeVersionsAction(input: unknown): Promise<ListResumeVersionsResult> {
+  const parsed = resumeTargetSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { status: "error", message: INVALID_INPUT };
+  }
+
+  await requireUser();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("resume_versions")
+    .select(VERSION_FIELDS)
+    .eq("resume_id", parsed.data.resumeId)
+    .order("version", { ascending: false });
+
+  if (error) {
+    console.error("[resume] version list failed", { code: error.code, message: error.message });
+
+    return { status: "error", message: VERSION_FAILED };
+  }
+
+  return { status: "ok", versions: (data ?? []).map(toVersionSummary) };
+}
+
+/**
+ * One snapshot's document, for the diff the user reads before restoring.
+ *
+ * `resume_id` is part of the match as well as `id`: the version id alone is
+ * authorized by RLS, but pairing them keeps a mismatched pair from returning a
+ * document the dialog would then diff against the wrong resume.
+ */
+export async function readResumeVersionAction(input: unknown): Promise<ReadResumeVersionResult> {
+  const parsed = resumeVersionTargetSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { status: "error", message: INVALID_INPUT };
+  }
+
+  await requireUser();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("resume_versions")
+    .select(`${VERSION_FIELDS}, content`)
+    .eq("id", parsed.data.versionId)
+    .eq("resume_id", parsed.data.resumeId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[resume] version read failed", { code: error.code, message: error.message });
+
+    return { status: "error", message: VERSION_FAILED };
+  }
+
+  if (!data) {
+    return { status: "error", message: VERSION_NOT_FOUND };
+  }
+
+  const document = readResumeDocument(data.content);
+
+  if (!document.ok) {
+    console.error("[resume] stored version failed validation", {
+      versionId: parsed.data.versionId,
+      issues: document.issues,
+    });
+
+    return { status: "error", message: VERSION_UNREADABLE };
+  }
+
+  return { status: "ok", version: toVersionSummary(data), document: document.document };
+}
+
+/**
+ * Snapshots the resume as it is stored right now.
+ *
+ * Deliberately reads `content` from the row instead of accepting a document: the
+ * editor's draft may hold unsaved edits, and a history entry that never matched
+ * any saved state is a restore target that reintroduces work the user discarded.
+ * The manual-save path therefore snapshots *after* the save lands, not before.
+ *
+ * `version: 0` is a sentinel — `assign_resume_version()` replaces it with
+ * `max(version) + 1` inside the insert, so two concurrent snapshots cannot both
+ * compute the same number. `ResumeVersionInsert` requires the column, hence the 0
+ * rather than an omission.
+ */
+export async function createResumeVersionAction(
+  input: CreateResumeVersionInput,
+): Promise<CreateResumeVersionResult> {
+  const parsed = createResumeVersionSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { status: "error", message: INVALID_INPUT };
+  }
+
+  const user = await requireUser();
+  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.version);
+
+  if (!allowed) {
+    return { status: "error", message: RATE_LIMITED_MESSAGE };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { resumeId, origin, label } = parsed.data;
+  const current = await readCurrentDocument(supabase, resumeId);
+
+  if (!current.ok) {
+    return { status: "error", message: current.message };
+  }
+
+  const newest = await readNewestVersion(supabase, resumeId);
+
+  if (newest) {
+    if (isSameDocument(newest.document, current.document)) {
+      return { status: "skipped" };
+    }
+
+    const elapsed = Date.now() - Date.parse(newest.createdAt);
+
+    // Only autosave is throttled. A user pressing Cmd+S is asking for a marker in
+    // the history, and refusing it would make the feature look broken.
+    if (origin === "autosave" && Number.isFinite(elapsed) && elapsed < AUTOSAVE_SNAPSHOT_GAP_MS) {
+      return { status: "skipped" };
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("resume_versions")
+    .insert({
+      resume_id: resumeId,
+      user_id: user.id,
+      version: 0,
+      content: current.document,
+      label: label.length > 0 ? label : null,
+      origin,
+    })
+    .select(VERSION_FIELDS)
+    .single();
+
+  if (error) {
+    console.error("[resume] version create failed", { code: error.code, message: error.message });
+
+    return { status: "error", message: "Could not save a version. Try again." };
+  }
+
+  await pruneResumeVersions(supabase, resumeId);
+
+  // Only manual snapshots are audited. An autosave snapshot every two minutes is
+  // the same keystroke noise `saveResumeAction` keeps out of the log.
+  if (origin === "manual") {
+    await logResumeActivity(user.id, "resume.version_create", resumeId, { version: data.version });
+  }
+
+  // No revalidation: the history is fetched by the dialog on open, and nothing
+  // rendered on the server shows a version count.
+  return { status: "created", version: toVersionSummary(data) };
+}
+
+/**
+ * Snapshots what is open, then hands back the older document for the editor to install.
+ *
+ * The restore is *not* written here. The client installs the returned document
+ * through the store's `replaceDocument`, so the change enters undo history and the
+ * existing autosave persists it under the `expectedUpdatedAt` token the editor
+ * already holds — writing `content` here would invalidate that token and the next
+ * keystroke would report a phantom conflict.
+ *
+ * The pre-restore snapshot is what makes this safe to try: it is taken first, and a
+ * failure to take it aborts the restore rather than proceeding without an undo path.
+ */
+export async function restoreResumeVersionAction(
+  input: ResumeVersionTargetInput,
+): Promise<RestoreResumeVersionResult> {
+  const parsed = resumeVersionTargetSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { status: "error", message: INVALID_INPUT };
+  }
+
+  const user = await requireUser();
+  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.version);
+
+  if (!allowed) {
+    return { status: "error", message: RATE_LIMITED_MESSAGE };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { resumeId, versionId } = parsed.data;
+
+  const target = await supabase
+    .from("resume_versions")
+    .select("version, content")
+    .eq("id", versionId)
+    .eq("resume_id", resumeId)
+    .maybeSingle();
+
+  if (target.error) {
+    console.error("[resume] restore read failed", {
+      code: target.error.code,
+      message: target.error.message,
+    });
+
+    return { status: "error", message: VERSION_FAILED };
+  }
+
+  if (!target.data) {
+    return { status: "error", message: VERSION_NOT_FOUND };
+  }
+
+  const restored = readResumeDocument(target.data.content);
+
+  if (!restored.ok) {
+    console.error("[resume] restore target failed validation", {
+      versionId,
+      issues: restored.issues,
+    });
+
+    return { status: "error", message: VERSION_UNREADABLE };
+  }
+
+  const current = await readCurrentDocument(supabase, resumeId);
+
+  if (!current.ok) {
+    return { status: "error", message: current.message };
+  }
+
+  if (isSameDocument(current.document, restored.document)) {
+    return { status: "unchanged" };
+  }
+
+  const { error: snapshotError } = await supabase.from("resume_versions").insert({
+    resume_id: resumeId,
+    user_id: user.id,
+    version: 0,
+    content: current.document,
+    label: `Before restoring v${target.data.version}`,
+    origin: "restore",
+  });
+
+  if (snapshotError) {
+    console.error("[resume] pre-restore snapshot failed", {
+      code: snapshotError.code,
+      message: snapshotError.message,
+    });
+
+    return {
+      status: "error",
+      message: "Could not save a copy of your current version, so nothing was restored.",
+    };
+  }
+
+  await pruneResumeVersions(supabase, resumeId);
+  await logResumeActivity(user.id, "resume.version_restore", resumeId, {
+    version: target.data.version,
+  });
+
+  return { status: "ok", document: restored.document, snapshotOf: target.data.version };
 }
 
 // ── Folders ───────────────────────────────────────────────────────────────────

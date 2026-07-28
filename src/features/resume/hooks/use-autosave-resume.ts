@@ -24,10 +24,16 @@
  *
  * - **`beforeunload` only warns.** A save cannot be awaited there; the prompt is the
  *   honest option when a debounce window is still open.
+ *
+ * - **Only `Cmd/Ctrl+S` snapshots as `"manual"`.** The debounce, the hidden tab, and the
+ *   unmount all label their version `"autosave"`, which is the label the server throttles
+ *   — so a session of typing leaves a handful of snapshots rather than one per 1.5s, and
+ *   an intentional save always leaves one.
  */
 
 import { useCallback, useEffect, useRef } from "react";
 
+import type { SnapshotOrigin } from "../schema/resume-schema";
 import { selectDraft, selectIsDirty, useResumeStore } from "../store/resume-store";
 import { useSaveResume } from "./use-save-resume";
 
@@ -50,18 +56,21 @@ export function useAutosaveResume(): UseAutosaveResumeResult {
   const failures = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const run = useCallback(async (): Promise<boolean> => {
-    if (timer.current !== null) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
+  const run = useCallback(
+    async (origin: SnapshotOrigin = "autosave"): Promise<boolean> => {
+      if (timer.current !== null) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
 
-    const saved = await save();
+      const saved = await save(origin);
 
-    failures.current = saved ? 0 : failures.current + 1;
+      failures.current = saved ? 0 : failures.current + 1;
 
-    return saved;
-  }, [save]);
+      return saved;
+    },
+    [save],
+  );
 
   /**
    * Kept in a ref so the unmount and listener effects can call the current `run` without
@@ -101,7 +110,7 @@ export function useAutosaveResume(): UseAutosaveResumeResult {
 
       // Otherwise the browser opens its "save page as" dialog over the editor.
       event.preventDefault();
-      void runRef.current();
+      void runRef.current("manual");
     }
 
     function onVisibilityChange() {
@@ -139,7 +148,11 @@ export function useAutosaveResume(): UseAutosaveResumeResult {
     [],
   );
 
-  return { flush: run };
+  // A flush is always a deliberate act — the shortcut, or a caller about to do something
+  // that must not race the debounce — so it snapshots as `"manual"`.
+  const flush = useCallback((): Promise<boolean> => runRef.current("manual"), []);
+
+  return { flush };
 }
 
 /** Read from the store rather than from a render's closure: listeners outlive renders. */
