@@ -13,10 +13,14 @@
  * reflect verbatim into a page.
  */
 
-import { AuthError, type AuthApiError } from "@supabase/supabase-js";
+import { AuthError, AuthRetryableFetchError, type AuthApiError } from "@supabase/supabase-js";
 
 /** Shown when there is nothing specific and safe to say. */
 export const GENERIC_AUTH_ERROR = "Something went wrong. Try again in a moment.";
+
+/** Shown when the request never reached the auth service at all. */
+export const AUTH_UNREACHABLE_ERROR =
+  "We couldn't reach the sign-in service. Check your connection and try again.";
 
 const MESSAGES: Record<string, string> = {
   invalid_credentials: "Email or password is incorrect.",
@@ -45,15 +49,60 @@ function isAuthApiError(error: unknown): error is AuthApiError {
 }
 
 /**
+ * Writes a failure the user is not allowed to see to the server log instead.
+ *
+ * The generic message is deliberately uninformative, which also makes a broken
+ * deployment indistinguishable from a wrong password in the one place anyone
+ * looks — the screen. A misconfigured `NEXT_PUBLIC_SUPABASE_URL` or a rotated
+ * anon key produces `401 Invalid API key`, which GoTrue returns with no
+ * `error_code` at all, so it lands in the same bucket as every other unknown and
+ * then vanishes. Logging `status` and `code` is what separates "the provider
+ * rejected this request" from "this build is pointed at the wrong project".
+ *
+ * Server-side only, and only for failures that collapse to a generic message —
+ * a wrong password is not an incident. `message` is included because it is the
+ * diagnostic payload; it is also exactly why none of this may travel back with
+ * the response.
+ */
+function reportAuthFailure(reason: string, error: unknown): void {
+  const detail =
+    error instanceof AuthError
+      ? { name: error.name, status: error.status, code: error.code, message: error.message }
+      : error instanceof Error
+        ? { name: error.name, message: error.message }
+        : { value: String(error) };
+
+  console.error("[auth] unhandled provider failure", { reason, ...detail });
+}
+
+/**
  * `error.code` is the stable identifier; `status` and `message` are not. Matching
  * on message text breaks the first time the provider rewords a string, and has
  * historically been how enumeration leaks get reintroduced.
  */
 export function authErrorMessage(error: unknown): string {
-  if (isAuthApiError(error) && error.code) {
-    return MESSAGES[error.code] ?? GENERIC_AUTH_ERROR;
+  // The request never got an answer: wrong project URL, DNS, or an outage. Worth
+  // its own message because it is the one failure in here that is not about the
+  // account, and "try again" is genuinely the right advice.
+  if (error instanceof AuthRetryableFetchError) {
+    reportAuthFailure("unreachable", error);
+    return AUTH_UNREACHABLE_ERROR;
   }
 
+  if (isAuthApiError(error) && error.code) {
+    const message = MESSAGES[error.code];
+
+    if (message) {
+      return message;
+    }
+
+    reportAuthFailure("unmapped-code", error);
+    return GENERIC_AUTH_ERROR;
+  }
+
+  // No code at all. `401 Invalid API key` arrives here, and so does anything
+  // that is not a GoTrue error object.
+  reportAuthFailure("no-code", error);
   return GENERIC_AUTH_ERROR;
 }
 
