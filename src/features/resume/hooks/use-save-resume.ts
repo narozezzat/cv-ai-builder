@@ -18,12 +18,28 @@
  * 2. **`expectedUpdatedAt` is the token from the last read or write.** The server
  *    matches on it, so a row someone else changed in another tab updates zero rows
  *    and comes back as `conflict` instead of overwriting work we never saw.
+ *
+ * 3. **Nothing is written back to the store unless the same resume is still open.**
+ *    Autosave flushes on unmount, so a response can land after `reset()` or after the
+ *    user has opened a different resume — and `markSaved` would then install one
+ *    resume's snapshot and `updated_at` on another, which is a silent data-loss bug
+ *    the next save turns into a phantom conflict.
  */
 
 import { useCallback, useRef } from "react";
 
 import { saveResumeAction } from "../actions/resume-actions";
 import { useResumeStore } from "../store/resume-store";
+
+/**
+ * The store, but only while `resumeId` is still the one this save was for. `undefined`
+ * means the response outlived the editor that asked for it and must be dropped.
+ */
+function current(resumeId: string) {
+  const state = useResumeStore.getState();
+
+  return state.resumeId === resumeId ? state : undefined;
+}
 
 export interface UseSaveResumeResult {
   /** Resolves `true` when the row was written. Safe to call when nothing is dirty. */
@@ -66,32 +82,31 @@ export function useSaveResume(): UseSaveResumeResult {
         expectedUpdatedAt: savedAt,
       });
 
+      const store = current(resumeId);
+
       if (result.status === "saved") {
-        useResumeStore.getState().markSaved({ draft, savedAt: result.savedAt });
+        // Still reported as written even if the editor moved on: the row *was* saved.
+        store?.markSaved({ draft, savedAt: result.savedAt });
 
         return true;
       }
 
       if (result.status === "conflict") {
-        useResumeStore
-          .getState()
-          .markConflict(
-            "This resume changed somewhere else since you opened it. Reload to get the newer version — your unsaved edits here would be overwritten.",
-          );
+        store?.markConflict(
+          "This resume changed somewhere else since you opened it. Reload to get the newer version — your unsaved edits here would be overwritten.",
+        );
 
         return false;
       }
 
-      useResumeStore.getState().markError(result.message);
+      store?.markError(result.message);
 
       return false;
     } catch (error) {
       // A rejected action is a network or runtime failure, not a validation one.
       // Reported as retryable because it is: the draft is still in the store.
       console.error("[resume] save threw", error);
-      useResumeStore
-        .getState()
-        .markError("Could not reach the server. Your changes are still here.");
+      current(resumeId)?.markError("Could not reach the server. Your changes are still here.");
 
       return false;
     } finally {

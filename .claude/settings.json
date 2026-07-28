@@ -88,7 +88,10 @@
       "Bash(node -e \"console.log\\(Object.keys\\(require\\('@tiptap/pm/state'\\)\\).slice\\(0,12\\)\\)\")",
       "Bash(lsof -ti:3000 -ti:3100)",
       "Bash(lsof -nP -iTCP:3100 -sTCP:LISTEN)",
-      "Bash(ps -o command= -p 34212)"
+      "Bash(ps -o command= -p 34212)",
+      "Bash(sed -n '655,700p' src/features/../types/resume.ts 2>/dev/null || sed -n '655,700p' src/types/resume.ts; echo \"=== fonts ===\"; grep -n \"RESUME_FONTS\" -A 15 src/types/resume.ts | sed -n 1,25p)",
+      "Read(//Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/src/types/**)",
+      "Bash(CI=1 PORT=3100 pnpm test:e2e --project=mobile-safari e2e/landing.spec.ts)"
     ],
     "additionalDirectories": [
       "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/supabase/migrations",
