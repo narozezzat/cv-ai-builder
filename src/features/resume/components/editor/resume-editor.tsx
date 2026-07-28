@@ -159,7 +159,7 @@ export function ResumeEditor({
         */}
         <aside
           className={cn(
-            "w-full min-w-0 lg:sticky lg:top-14 lg:block lg:h-[calc(100svh-3.5rem)] lg:w-[26rem] lg:shrink-0 lg:overflow-y-auto lg:py-2 xl:w-[32rem]",
+            "w-full min-w-0 lg:sticky lg:top-14 lg:block lg:h-[calc(100svh-3.5rem)] lg:w-104 lg:shrink-0 lg:overflow-y-auto lg:py-2 xl:w-lg",
             pane === "edit" && "hidden lg:block",
           )}
         >

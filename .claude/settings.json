@@ -91,7 +91,8 @@
       "Bash(ps -o command= -p 34212)",
       "Bash(sed -n '655,700p' src/features/../types/resume.ts 2>/dev/null || sed -n '655,700p' src/types/resume.ts; echo \"=== fonts ===\"; grep -n \"RESUME_FONTS\" -A 15 src/types/resume.ts | sed -n 1,25p)",
       "Read(//Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/src/types/**)",
-      "Bash(CI=1 PORT=3100 pnpm test:e2e --project=mobile-safari e2e/landing.spec.ts)"
+      "Bash(CI=1 PORT=3100 pnpm test:e2e --project=mobile-safari e2e/landing.spec.ts)",
+      "Bash(awk 'NR>=1 && /saveResumeAction/{print NR\": \"$0}' src/features/resume/actions/resume-actions.ts)"
     ],
     "additionalDirectories": [
       "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/supabase/migrations",
