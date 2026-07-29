@@ -7,15 +7,57 @@
  * instead of throwing. A resume must always open; the worst outcome of a stale id is
  * that it opens in the wrong design, which the user can see and change.
  *
- * Phase 4 fills this out to twenty. Adding one is a config file plus a line here.
+ * Order here is the gallery order: two per category, categories grouped. Adding a template
+ * is a config file plus a line in this array — `registry.test.ts` asserts the invariants
+ * (unique ids, four-plus palettes, a real layout, both slots per category filled).
  */
 
 import { DEFAULT_TEMPLATE_ID } from "@/types/resume";
 
 import type { TemplateDefinition } from "../lib/template-types";
+import { corporateColumn } from "./corporate-column";
+import { corporateNavy } from "./corporate-navy";
+import { creativeArc } from "./creative-arc";
+import { creativeCanvas } from "./creative-canvas";
+import { designerPortfolio } from "./designer-portfolio";
+import { designerStudio } from "./designer-studio";
+import { elegantLine } from "./elegant-line";
+import { elegantSerif } from "./elegant-serif";
+import { executiveCrest } from "./executive-crest";
+import { executiveMono } from "./executive-mono";
+import { minimalQuiet } from "./minimal-quiet";
+import { minimalThin } from "./minimal-thin";
+import { modernAurora } from "./modern-aurora";
 import { modernSlate } from "./modern-slate";
+import { professionalBrief } from "./professional-brief";
+import { professionalLedger } from "./professional-ledger";
+import { startupPitch } from "./startup-pitch";
+import { startupSprint } from "./startup-sprint";
+import { techGrid } from "./tech-grid";
+import { techTerminal } from "./tech-terminal";
 
-export const TEMPLATES: readonly TemplateDefinition[] = [modernSlate];
+export const TEMPLATES: readonly TemplateDefinition[] = [
+  modernSlate,
+  modernAurora,
+  minimalThin,
+  minimalQuiet,
+  professionalLedger,
+  professionalBrief,
+  creativeCanvas,
+  creativeArc,
+  executiveMono,
+  executiveCrest,
+  techTerminal,
+  techGrid,
+  designerStudio,
+  designerPortfolio,
+  corporateNavy,
+  corporateColumn,
+  elegantSerif,
+  elegantLine,
+  startupPitch,
+  startupSprint,
+];
 
 const BY_ID = new Map(TEMPLATES.map((template) => [template.id, template]));
 

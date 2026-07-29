@@ -79,12 +79,18 @@ export function SectionBlock({ template, section }: SectionBlockProps) {
 
   return (
     <SectionShell template={template} title={section.title}>
-      {sectionBody({ template, section })}
+      <SectionBody template={template} section={section} />
     </SectionShell>
   );
 }
 
-function sectionBody({ template, section }: SectionBlockProps) {
+/**
+ * A section's content without its heading.
+ *
+ * Exported for `timeline-split`, which renders the heading in a gutter beside the body
+ * rather than above it. Every other layout composes `SectionBlock` and gets both.
+ */
+export function SectionBody({ template, section }: SectionBlockProps) {
   const divider = template.definition.tokens.itemDivider;
 
   switch (section.kind) {

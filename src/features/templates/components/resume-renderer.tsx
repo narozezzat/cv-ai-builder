@@ -10,7 +10,11 @@
 
 import type { ResumeRenderInput } from "@/types/resume";
 
+import { HeaderBannerLayout } from "../layouts/header-banner";
+import { SidebarLayout } from "../layouts/sidebar";
 import { SingleColumnLayout } from "../layouts/single-column";
+import { TimelineSplitLayout } from "../layouts/timeline-split";
+import { TwoColumnBalancedLayout } from "../layouts/two-column-balanced";
 import { resumeFontFamily } from "../lib/fonts";
 import { resolveTemplate, type ResolvedTemplate } from "../lib/resolve-template";
 
@@ -72,6 +76,21 @@ function renderLayout(template: ResolvedTemplate, document: ResumeRenderInput["d
   switch (template.definition.layout) {
     case "single-column":
       return <SingleColumnLayout template={template} document={document} />;
+
+    case "sidebar-left":
+      return <SidebarLayout template={template} document={document} side="left" />;
+
+    case "sidebar-right":
+      return <SidebarLayout template={template} document={document} side="right" />;
+
+    case "header-banner":
+      return <HeaderBannerLayout template={template} document={document} />;
+
+    case "timeline-split":
+      return <TimelineSplitLayout template={template} document={document} />;
+
+    case "two-column-balanced":
+      return <TwoColumnBalancedLayout template={template} document={document} />;
 
     default: {
       // Exhaustiveness check: a registry entry naming a layout with no component here

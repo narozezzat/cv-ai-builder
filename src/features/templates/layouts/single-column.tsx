@@ -11,16 +11,9 @@
  * share page.
  */
 
-import type { ResumeDocument } from "@/types/resume";
-
 import { ResumeHeader } from "../components/resume-header";
-import { isSectionRendered, SectionBlock } from "../components/resume-sections";
-import type { ResolvedTemplate } from "../lib/resolve-template";
-
-export interface LayoutProps {
-  template: ResolvedTemplate;
-  document: ResumeDocument;
-}
+import { isSectionRendered } from "../components/resume-sections";
+import { SectionStack, type LayoutProps } from "./layout-shared";
 
 export function SingleColumnLayout({ template, document }: LayoutProps) {
   const sections = document.sections.filter(isSectionRendered);
@@ -33,10 +26,12 @@ export function SingleColumnLayout({ template, document }: LayoutProps) {
         gap: template.spacing.sectionGapPx,
       }}
     >
-      <ResumeHeader template={template} basics={document.basics} />
-      {sections.map((section) => (
-        <SectionBlock key={section.id} template={template} section={section} />
-      ))}
+      <ResumeHeader
+        template={template}
+        basics={document.basics}
+        align={template.definition.tokens.headerAlign}
+      />
+      <SectionStack template={template} sections={sections} />
     </div>
   );
 }
