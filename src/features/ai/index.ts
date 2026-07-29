@@ -36,6 +36,9 @@ export {
   tailorToCompanyAction,
 } from "./actions/ai-actions";
 
+export { AiFailureNotice } from "./components/ai-failure-notice";
+export type { AiFailureNoticeProps } from "./components/ai-failure-notice";
+
 export { AiSuggestionPopover } from "./components/ai-suggestion-popover";
 export type { AiAcceptPayload, AiSuggestionPopoverProps } from "./components/ai-suggestion-popover";
 

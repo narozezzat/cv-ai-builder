@@ -23,7 +23,7 @@ import { routes } from "@/lib/routes";
 
 import type { AiActionFailure } from "../lib/ai-action-result";
 
-interface AiFailureNoticeProps {
+export interface AiFailureNoticeProps {
   failure: AiActionFailure;
   onRetry: () => void;
 }
