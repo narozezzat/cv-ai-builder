@@ -37,6 +37,14 @@ export interface FieldShellProps {
   /** Helper text. Rendered before any error so the two never swap places. */
   hint?: string;
   error?: string;
+  /**
+   * Sits beside the label — in practice the AI suggestion trigger.
+   *
+   * A sibling of the label, never a child of it: a `<label>` wrapping a `<button>`
+   * makes clicking the button also focus the control, which closes the popover the
+   * click just opened.
+   */
+  action?: ReactNode;
   className?: string;
   children: ReactNode;
 }
@@ -47,15 +55,34 @@ export interface FieldShellProps {
  * Exported for the rich-text field, which is not a plain input but has to look and
  * announce identically to the ones here.
  */
-export function FieldShell({ id, label, hint, error, className, children }: FieldShellProps) {
+export function FieldShell({
+  id,
+  label,
+  hint,
+  error,
+  action,
+  className,
+  children,
+}: FieldShellProps) {
+  // `id` on the label as well as `htmlFor`: the rich-text field's control is a
+  // contenteditable div, which `htmlFor` cannot target, so it names itself with
+  // `aria-labelledby` pointing here.
+  const labelNode = (
+    <Label id={`${id}-label`} htmlFor={id} className="text-xs font-medium text-muted-foreground">
+      {label}
+    </Label>
+  );
+
   return (
     <div className={cn("space-y-1.5", className)}>
-      {/* `id` on the label as well as `htmlFor`: the rich-text field's control is a
-          contenteditable div, which `htmlFor` cannot target, so it names itself with
-          `aria-labelledby` pointing here. */}
-      <Label id={`${id}-label`} htmlFor={id} className="text-xs font-medium text-muted-foreground">
-        {label}
-      </Label>
+      {action ? (
+        <div className="flex min-h-6 items-center justify-between gap-2">
+          {labelNode}
+          {action}
+        </div>
+      ) : (
+        labelNode
+      )}
 
       {children}
 

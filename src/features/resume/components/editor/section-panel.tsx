@@ -29,6 +29,7 @@ import { RESUME_LIMITS, SECTION_KIND_LABELS, type ResumeSection } from "@/types/
 
 import { RESUME_TITLE_MAX } from "../../schema/resume-schema";
 import { useResumeStore } from "../../store/resume-store";
+import { SummaryFieldActions } from "./ai-field-actions";
 import { TextField } from "./editor-fields";
 import { RichTextField } from "./rich-text-field";
 import { ITEM_EMPTY_HINTS, ITEM_NOUNS, ItemFields, summarizeItem } from "./item-fields";
@@ -134,6 +135,12 @@ export function SectionPanel({ section }: SectionPanelProps) {
                   value={section.content}
                   maxLength={RESUME_LIMITS.sectionRichText}
                   placeholder="Three or four lines: what you do, how long you have done it, and the thing you are best at. Written for the specific job where possible."
+                  action={
+                    <SummaryFieldActions
+                      value={section.content}
+                      onAccept={(content) => setSummary(section.id, content)}
+                    />
+                  }
                   onChange={(content) => setSummary(section.id, content)}
                 />
               ) : (

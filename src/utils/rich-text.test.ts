@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isRichTextEmpty, richTextLength, richTextToPlainText } from "./rich-text";
+import {
+  isRichTextEmpty,
+  plainTextToRichText,
+  richTextLength,
+  richTextToPlainText,
+} from "./rich-text";
 
 describe("richTextToPlainText", () => {
   it("strips inline marks", () => {
@@ -27,6 +32,47 @@ describe("richTextToPlainText", () => {
 
   it("collapses whitespace without collapsing newlines", () => {
     expect(richTextToPlainText("<p>  a   b  </p>\n\n<p>c</p>")).toBe("a b\nc");
+  });
+});
+
+describe("plainTextToRichText", () => {
+  it("wraps a single line in one paragraph", () => {
+    expect(plainTextToRichText("Shipped three releases")).toBe("<p>Shipped three releases</p>");
+  });
+
+  it("splits blank-line runs into paragraphs", () => {
+    expect(plainTextToRichText("One\n\n\nTwo")).toBe("<p>One</p><p>Two</p>");
+  });
+
+  it("turns a single newline into a hard break", () => {
+    expect(plainTextToRichText("One\nTwo")).toBe("<p>One<br>Two</p>");
+  });
+
+  it("normalizes CRLF", () => {
+    expect(plainTextToRichText("One\r\n\r\nTwo")).toBe("<p>One</p><p>Two</p>");
+  });
+
+  // Security: model output lands in a stored document that a public share page
+  // renders, so markup in it must not survive as markup.
+  it("escapes markup in the text", () => {
+    expect(plainTextToRichText('<script>alert("x")</script>')).toBe(
+      '<p>&lt;script&gt;alert("x")&lt;/script&gt;</p>',
+    );
+  });
+
+  it("escapes ampersands before angle brackets, so an entity is not double-decoded", () => {
+    expect(plainTextToRichText("R&D &lt;b&gt;")).toBe("<p>R&amp;D &amp;lt;b&amp;gt;</p>");
+  });
+
+  it("round-trips back to the text it was given", () => {
+    const text = "R&D <scale>\nsecond line";
+
+    expect(richTextToPlainText(plainTextToRichText(text))).toBe(text);
+  });
+
+  it("yields an empty document for blank input", () => {
+    expect(plainTextToRichText("")).toBe("<p></p>");
+    expect(plainTextToRichText("   \n  \n ")).toBe("<p></p>");
   });
 });
 

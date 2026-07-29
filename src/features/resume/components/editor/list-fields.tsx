@@ -14,7 +14,7 @@
  */
 
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import { IconButton } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,13 @@ interface BulletListFieldProps {
   maxItems: number;
   maxLength: number;
   placeholder?: string;
+  /**
+   * Rendered in the label row, beside the count — the AI suggestion trigger.
+   *
+   * A sibling of the `<Label>` rather than inside it, so activating it does not also
+   * move focus into the first bullet and dismiss the popover it opened.
+   */
+  action?: ReactNode;
   className?: string;
 }
 
@@ -50,6 +57,7 @@ export function BulletListField({
   maxItems,
   maxLength,
   placeholder,
+  action,
   className,
 }: BulletListFieldProps) {
   const groupId = useId();
@@ -75,8 +83,11 @@ export function BulletListField({
         <Label id={groupId} className="text-xs font-medium text-muted-foreground">
           {label}
         </Label>
-        <span className="text-xs text-muted-foreground" aria-hidden>
-          {value.length} / {maxItems}
+        <span className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground" aria-hidden>
+            {value.length} / {maxItems}
+          </span>
+          {action}
         </span>
       </div>
 
@@ -159,6 +170,8 @@ interface KeywordListFieldProps {
   maxLength: number;
   placeholder?: string;
   hint?: string;
+  /** Rendered in the label row, beside the count — the AI suggestion trigger. */
+  action?: ReactNode;
   className?: string;
 }
 
@@ -177,6 +190,7 @@ export function KeywordListField({
   maxLength,
   placeholder,
   hint,
+  action,
   className,
 }: KeywordListFieldProps) {
   const inputId = useId();
@@ -219,8 +233,11 @@ export function KeywordListField({
         <Label htmlFor={inputId} className="text-xs font-medium text-muted-foreground">
           {label}
         </Label>
-        <span className="text-xs text-muted-foreground" aria-hidden>
-          {value.length} / {maxItems}
+        <span className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground" aria-hidden>
+            {value.length} / {maxItems}
+          </span>
+          {action}
         </span>
       </div>
 

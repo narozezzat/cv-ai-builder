@@ -58,6 +58,41 @@ export function richTextToPlainText(html: string): string {
 }
 
 /**
+ * Wraps plain text as the minimal rich-text document that holds it.
+ *
+ * Every AI capability answers in plain text (see the output rules in the prompt
+ * layer), but the fields those answers land in store HTML. Concatenating the text
+ * into `<p>…</p>` unescaped would let a model — or the pasted job description that
+ * influenced it — inject markup into a stored document that is later rendered on a
+ * public share page, so `&`, `<`, and `>` are escaped here rather than trusted to
+ * the sanitizer downstream. Quotes are left alone: the output is element content,
+ * never an attribute value.
+ *
+ * Blank-line runs separate paragraphs; a single newline inside one becomes `<br>`,
+ * which is what TipTap itself emits for a soft break. Empty input yields `<p></p>` —
+ * the serialization of an empty document, so `isRichTextEmpty` still agrees.
+ */
+export function plainTextToRichText(text: string): string {
+  const paragraphs = text
+    .replace(/\r\n?/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+
+  if (paragraphs.length === 0) {
+    return "<p></p>";
+  }
+
+  return paragraphs
+    .map((paragraph) => `<p>${escapeHtmlText(paragraph).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+function escapeHtmlText(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
  * True when the document has no prose.
  *
  * TipTap serializes an empty document as `<p></p>`, so a string-length check on

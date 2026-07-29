@@ -40,6 +40,13 @@ import {
 } from "@/types/resume";
 
 import { useResumeStore } from "../../store/resume-store";
+import {
+  ExperienceSummaryActions,
+  HighlightsActions,
+  KeywordActions,
+  experienceKeywordSubject,
+  skillKeywordSubject,
+} from "./ai-field-actions";
 import { DateField, FieldGrid, SelectField, SwitchField, TextField } from "./editor-fields";
 import { BulletListField, KeywordListField } from "./list-fields";
 import { RichTextField } from "./rich-text-field";
@@ -131,6 +138,12 @@ export function ExperienceFields({ sectionId, item }: ItemFieldsProps<Experience
         value={item.summary}
         maxLength={RESUME_LIMITS.itemRichText}
         placeholder="One or two lines on scope: team size, systems owned, what you were accountable for."
+        action={
+          <ExperienceSummaryActions
+            item={item}
+            onAccept={(summary) => patch({ summary }, "summary")}
+          />
+        }
         onChange={(summary) => patch({ summary }, "summary")}
       />
 
@@ -140,6 +153,7 @@ export function ExperienceFields({ sectionId, item }: ItemFieldsProps<Experience
         maxItems={RESUME_LIMITS.highlightsPerItem}
         maxLength={RESUME_LIMITS.highlightText}
         placeholder="Cut checkout latency 40% by moving validation to the edge."
+        action={<HighlightsActions item={item} onAccept={(highlights) => patch({ highlights })} />}
         onChange={(highlights) => patch({ highlights })}
       />
 
@@ -150,6 +164,15 @@ export function ExperienceFields({ sectionId, item }: ItemFieldsProps<Experience
         maxLength={RESUME_LIMITS.keywordText}
         placeholder="TypeScript, Postgres, Terraform"
         hint="Press Enter or comma after each one. These are what keyword scans look for."
+        action={
+          <KeywordActions
+            value={item.technologies}
+            subject={experienceKeywordSubject(item)}
+            maxItems={RESUME_LIMITS.technologiesPerItem}
+            disabledReason="add a job title first"
+            onAccept={(technologies) => patch({ technologies })}
+          />
+        }
         onChange={(technologies) => patch({ technologies })}
       />
     </>
@@ -365,6 +388,15 @@ export function SkillFields({ sectionId, item }: ItemFieldsProps<SkillItem>) {
         maxItems={RESUME_LIMITS.keywordsPerItem}
         maxLength={RESUME_LIMITS.keywordText}
         placeholder="tRPC, Zod"
+        action={
+          <KeywordActions
+            value={item.keywords}
+            subject={skillKeywordSubject(item)}
+            maxItems={RESUME_LIMITS.keywordsPerItem}
+            disabledReason="name the skill first"
+            onAccept={(keywords) => patch({ keywords })}
+          />
+        }
         onChange={(keywords) => patch({ keywords })}
       />
     </>
