@@ -16,11 +16,20 @@
 import type { ResumeFont } from "@/types/resume";
 
 /**
- * Layouts that exist. Phase 4 adds the sidebar, banner, and timeline variants; listing
- * ids here before their component exists would let a registry entry reference a layout
- * that renders nothing.
+ * Layouts that exist, each with a component in `layouts/` and a `case` in the renderer's
+ * switch. The switch ends in a `never` assignment, so adding an id here without its
+ * component is a compile error rather than a template that renders a blank page.
+ *
+ * Matches the `layout` CHECK constraint on `resume_templates`.
  */
-export const TEMPLATE_LAYOUTS = ["single-column"] as const;
+export const TEMPLATE_LAYOUTS = [
+  "single-column",
+  "sidebar-left",
+  "sidebar-right",
+  "header-banner",
+  "timeline-split",
+  "two-column-balanced",
+] as const;
 
 export type TemplateLayoutId = (typeof TEMPLATE_LAYOUTS)[number];
 
@@ -93,6 +102,34 @@ export interface TemplateTokens {
   bullet: "disc" | "dash";
   /** A hairline between repeated items. */
   itemDivider: boolean;
+  /**
+   * Where the name and contact block sits. Required rather than defaulted: it is the
+   * first thing a reader sees, so every template should have had to decide.
+   */
+  headerAlign: "left" | "center";
+  /**
+   * Width of the narrow column in the sidebar layouts, as a percentage of the content
+   * box. Ignored by every other layout. Below ~26% skill pills start wrapping one per
+   * line; above ~42% the main column stops holding a bullet on one line.
+   *
+   * @default 34
+   */
+  asideWidthPct?: number;
+  /**
+   * How the sidebar column is separated from the page. `tint` is a pale wash of the
+   * heading colour, `solid` fills it with the accent and inverts the text on top of it.
+   * Ignored outside the sidebar layouts.
+   *
+   * @default "tint"
+   */
+  asideFill?: "none" | "tint" | "solid";
+  /**
+   * What the full-bleed band behind the header is filled with. `accent` and `heading`
+   * invert the text; `tint` keeps it. Ignored outside `header-banner`.
+   *
+   * @default "accent"
+   */
+  bannerFill?: "accent" | "heading" | "tint";
 }
 
 export interface TemplateDefinition {

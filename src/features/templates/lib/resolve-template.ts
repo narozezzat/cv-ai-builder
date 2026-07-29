@@ -78,6 +78,25 @@ export interface ResolvedTemplate {
   };
 }
 
+/**
+ * The same resolved template with some colours swapped.
+ *
+ * A banner or a solid sidebar inverts the palette inside one region: text that is
+ * `heading` on paper has to become `onAccent` on the fill. Every atom in the tree already
+ * takes its colours from `template.colors`, so handing that subtree a derived template is
+ * the whole change — the alternative is a `colors` prop on `ResumeHeader`, `SectionShell`,
+ * and everything below them, threaded through layouts that do not invert anything.
+ *
+ * Deliberately shallow-merges `colors` only. A region can restyle itself; it cannot
+ * silently change the page size or the type scale out from under the layout.
+ */
+export function withPaletteOverride(
+  template: ResolvedTemplate,
+  overrides: Partial<TemplatePalette>,
+): ResolvedTemplate {
+  return { ...template, colors: { ...template.colors, ...overrides } };
+}
+
 export interface ResolveTemplateInput {
   templateId: string;
   theme: ResumeTheme;

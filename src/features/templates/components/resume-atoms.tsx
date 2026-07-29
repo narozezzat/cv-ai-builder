@@ -38,11 +38,14 @@ export function headingFont(template: ResolvedTemplate): CSSProperties {
 /** Keeps one item — title, dates, prose, bullets — from being split across two pages. */
 const AVOID_BREAK: CSSProperties = { breakInside: "avoid" };
 
-export function SectionShell({
-  template,
-  title,
-  children,
-}: TemplatePartProps & { title: string; children: ReactNode }) {
+/**
+ * A section heading, with the template's chosen treatment.
+ *
+ * Separate from `SectionShell` because `timeline-split` puts the title in a left gutter and
+ * the body in a right column — two different boxes, one heading style. Every other layout
+ * gets it through `SectionShell` and never renders this directly.
+ */
+export function SectionTitle({ template, title }: TemplatePartProps & { title: string }) {
   const { colors, type, definition, spacing } = template;
   const { sectionTitle } = definition.tokens;
 
@@ -64,9 +67,17 @@ export function SectionShell({
       : {}),
   };
 
+  return <h2 style={titleStyle}>{title}</h2>;
+}
+
+export function SectionShell({
+  template,
+  title,
+  children,
+}: TemplatePartProps & { title: string; children: ReactNode }) {
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: spacing.itemGapPx }}>
-      <h2 style={titleStyle}>{title}</h2>
+    <section style={{ display: "flex", flexDirection: "column", gap: template.spacing.itemGapPx }}>
+      <SectionTitle template={template} title={title} />
       {children}
     </section>
   );
