@@ -104,7 +104,13 @@
       "Bash(node -e \"import\\('@ai-sdk/anthropic'\\).then\\(m=>console.log\\(Object.keys\\(m\\).join\\('\\\\n'\\)\\)\\)\")",
       "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(JSON.stringify\\({ai:p.dependencies.ai,g:p.dependencies['@ai-sdk/google'],o:p.dependencies['@ai-sdk/openai'],a:p.dependencies['@ai-sdk/anthropic']}\\)\\)\")",
       "Bash(awk 'NR>=4334 && NR<=4560 && /output/' node_modules/ai/dist/index.d.ts)",
-      "Bash(awk -F: '$1>4334 && $1<4560')"
+      "Bash(awk -F: '$1>4334 && $1<4560')",
+      "Bash(grep -n \"^      [a-z_]*: {$\" src/types/database.ts)",
+      "Bash(rg -n \"server\" src/features/resume/index.ts src/features/*/index.ts -l)",
+      "Bash(rg -rn \"internalPath\" --glob '*.js' src)",
+      "Bash(rg -n \"micromatchPatternNullableSchema|micromatchPatternSchema =\" dist/Settings/*.js)",
+      "Bash(pnpm prettier *)",
+      "Bash(python3 -c \"b=open\\('src/components/providers/command-palette-provider.tsx','rb'\\).read\\(\\); print\\('ctrl:', sorted\\({c for c in b if c<9 or 11<=c<32}\\)\\)\")"
     ],
     "additionalDirectories": [
       "/Users/narozfahmy/Desktop/projects/Builders/ai-cv-builder/supabase/migrations",

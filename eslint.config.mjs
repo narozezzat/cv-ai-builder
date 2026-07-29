@@ -88,6 +88,15 @@ const eslintConfig = defineConfig([
        *   Importing `features/resume/store/resume-store` couples the caller to
        *   an implementation detail; importing `features/resume` couples it to a
        *   contract. Expressed as `fileInternalPath` on the target.
+       *
+       *   `app` may also reach a feature's `server.ts`. That second entry point
+       *   exists because one `import "server-only"` module reachable from
+       *   `index.ts` breaks the build for *every* client component that imports
+       *   the barrel — and client components legitimately import barrels for
+       *   registries and pure helpers. So the barrel stays client-safe and the
+       *   server-only surface (async sections, queries) lives beside it. Other
+       *   features still get `index.ts` only: a route composes server work, a
+       *   feature consuming another feature should not care where it runs.
        * - `ui` (vendored shadcn primitives) may not depend on `components`.
        *   Primitives that reach back up into our shared layer stop being
        *   replaceable when shadcn regenerates them.
@@ -124,7 +133,14 @@ const eslintConfig = defineConfig([
             },
             {
               from: { element: { types: { anyOf: ["app", "root"] } } },
-              allow: { to: { element: { type: "feature", fileInternalPath: "index.ts" } } },
+              allow: {
+                to: {
+                  element: {
+                    type: "feature",
+                    fileInternalPath: ["index.ts", "server.ts"],
+                  },
+                },
+              },
             },
             {
               // Same feature: free movement inside its own folder.

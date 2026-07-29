@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MenuIcon, LayoutDashboardIcon, FileTextIcon } from "lucide-react";
+import { MenuIcon, LayoutDashboardIcon, FileTextIcon, LayoutTemplateIcon } from "lucide-react";
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ interface MobileNavProps {
 const ITEMS = [
   { href: routes.dashboard, label: "Overview", icon: LayoutDashboardIcon },
   { href: routes.resumes, label: "Resumes", icon: FileTextIcon },
+  { href: routes.templateGallery, label: "Templates", icon: LayoutTemplateIcon },
 ] as const;
 
 export function MobileNav({ userMenu }: MobileNavProps) {

@@ -16,6 +16,7 @@ import { SingleColumnLayout } from "../layouts/single-column";
 import { TimelineSplitLayout } from "../layouts/timeline-split";
 import { TwoColumnBalancedLayout } from "../layouts/two-column-balanced";
 import { resumeFontFamily } from "../lib/fonts";
+import { proseScope, resumeStyles } from "../lib/page-styles";
 import { resolveTemplate, type ResolvedTemplate } from "../lib/resolve-template";
 
 export interface ResumeRendererProps extends ResumeRenderInput {
@@ -60,13 +61,11 @@ export function ResumeRenderer({
       }}
     >
       {/*
-        Rich text arrives as an HTML string, so it cannot carry inline styles the way the
-        rest of this tree does — it needs a stylesheet, and the print route and share page
-        are exactly the contexts where the app's stylesheet may not be in the tree. So the
-        renderer ships its own, scoped to this page. Only template-derived numbers and the
-        already hex-validated palette are interpolated; no user text reaches this string.
+        Rich-text rules, page-break control, and — on the print target only — the `@page`
+        box. See `page-styles.ts` for why the renderer carries its own stylesheet and why
+        `@page` cannot be emitted from a preview.
       */}
-      <style dangerouslySetInnerHTML={{ __html: proseStyles(template, scope) }} />
+      <style dangerouslySetInnerHTML={{ __html: resumeStyles(template, scope, { printTarget }) }} />
       {renderLayout(template, document)}
     </article>
   );
@@ -99,60 +98,4 @@ function renderLayout(template: ResolvedTemplate, document: ResumeRenderInput["d
       return unhandled;
     }
   }
-}
-
-/**
- * A per-page scope for the prose CSS.
- *
- * Without it, two resumes on one screen — the template gallery renders a dozen — would
- * fight over the same `[data-resume-prose]` rules and every thumbnail would take the last
- * one's accent and spacing. Derived, not random, because a hook-free tree has no `useId`
- * and the server and client renders have to agree.
- */
-function proseScope(template: ResolvedTemplate): string {
-  const parts = [
-    template.definition.id,
-    template.colors.id,
-    template.colors.accent,
-    // Two resumes on the same template can still differ in type size and rhythm.
-    Math.round(template.type.bodyPx * 100),
-    Math.round(template.spacing.blockGapPx * 100),
-  ];
-
-  // This value goes into a CSS selector, so it is reduced to a character class that
-  // cannot terminate one. Every input is registry- or schema-controlled today; the
-  // filter is what keeps that from being load-bearing.
-  return parts
-    .join("-")
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "");
-}
-
-/** Rounded, and never `NaN` — an invalid length would invalidate the whole declaration. */
-function px(value: number): string {
-  return `${Number.isFinite(value) ? Math.round(value * 100) / 100 : 0}px`;
-}
-
-function proseStyles(template: ResolvedTemplate, scope: string): string {
-  const { colors, spacing, definition } = template;
-  const root = `[data-resume-scope="${scope}"] [data-resume-prose]`;
-  const bullet = definition.tokens.bullet === "dash" ? "–" : "•";
-
-  // Matches `Bullets` in `resume-atoms.tsx` deliberately: a highlight typed into the
-  // rich-text editor and one typed into the bullet list must look identical, because the
-  // reader has no idea which field produced which line.
-  return [
-    `${root}{display:flex;flex-direction:column;gap:${px(spacing.blockGapPx)}}`,
-    `${root} p{margin:0}`,
-    `${root} strong{font-weight:600}`,
-    `${root} em{font-style:italic}`,
-    `${root} a{color:${colors.accent};text-decoration:none}`,
-    `${root} ul{display:flex;flex-direction:column;gap:${px(spacing.blockGapPx / 2)};list-style:none;margin:0;padding:0}`,
-    `${root} li{display:flex;gap:${px(spacing.blockGapPx * 1.5)}}`,
-    `${root} li::before{content:"${bullet}";color:${colors.accent};flex:none}`,
-    // TipTap's `ListItem` takes block content, so a bullet round-trips as
-    // `<li><p>…</p></li>`. Without this the paragraph reset above is not enough to stop
-    // the browser's default list spacing from reappearing inside the flex row.
-    `${root} li>p{margin:0;flex:1}`,
-  ].join("");
 }
