@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { RESUME_DATE_PATTERN } from "@/types/resume";
@@ -266,6 +267,97 @@ export function SwitchField({ label, checked, onChange, hint, className }: Switc
         aria-describedby={hint ? `${id}-hint` : undefined}
         onCheckedChange={onChange}
       />
+    </div>
+  );
+}
+
+interface SliderFieldProps {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  /**
+   * Given to the readout *and* to the slider's own `format`, so what is on screen and
+   * what a screen reader announces cannot drift. Units that `Intl` knows — percent,
+   * millimetre — belong here; ones it does not, like points, belong in the label.
+   */
+  formatOptions?: Intl.NumberFormatOptions;
+  hint?: string;
+  className?: string;
+}
+
+/**
+ * A numeric setting with a live readout. Used by the design panel, not the sections.
+ *
+ * Two details are load-bearing and neither is obvious from the call site:
+ *
+ * The value is passed as an array. The vendored wrapper derives its thumb count from the
+ * `value` prop and a bare number falls through to `[min, max]`, so a scalar renders two
+ * thumbs for one setting.
+ *
+ * The label is a `<span>`, not a `<label>`. Base UI's slider root is a `<div>`, so
+ * `htmlFor` has nothing to point at; the focusable element is a hidden `<input
+ * type="range">` inside the thumb, and `aria-labelledby` on the root is the one prop the
+ * root forwards down to it. That list also absorbs the hint, because the thumb's input
+ * cannot be given an `aria-describedby` from out here.
+ */
+export function SliderField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  formatOptions,
+  hint,
+  className,
+}: SliderFieldProps) {
+  const id = useId();
+  const labelId = `${id}-label`;
+  const hintId = `${id}-hint`;
+
+  // Fixed locale, as in `utils/date.ts`: the server's locale and the browser's differ,
+  // and a number formatted twice from two of them is a hydration mismatch.
+  const readout = new Intl.NumberFormat("en", formatOptions).format(value);
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span id={labelId} className="text-xs font-medium text-muted-foreground">
+          {label}
+        </span>
+        {/* `aria-hidden`: the slider announces the same number, formatted the same way. */}
+        <span aria-hidden className="text-xs font-medium tabular-nums">
+          {readout}
+        </span>
+      </div>
+
+      <Slider
+        value={[value]}
+        min={min}
+        max={max}
+        step={step}
+        format={formatOptions}
+        locale="en"
+        aria-labelledby={hint ? `${labelId} ${hintId}` : labelId}
+        onValueChange={(next) => {
+          // A range slider reports an array, a single-thumb one a number. This is the
+          // latter, but the prop's type covers both.
+          const first = typeof next === "number" ? next : next[0];
+
+          if (first !== undefined) {
+            onChange(first);
+          }
+        }}
+      />
+
+      {hint ? (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
