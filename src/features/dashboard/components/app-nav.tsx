@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 const ITEMS = [
   { href: routes.dashboard, label: "Overview" },
   { href: routes.resumes, label: "Resumes" },
+  { href: routes.templateGallery, label: "Templates" },
 ] as const;
 
 /**

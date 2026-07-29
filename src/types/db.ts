@@ -88,6 +88,9 @@ export type ResumeVersionRow = Tables<"resume_versions">;
 export type ResumeVersionInsert = TablesInsert<"resume_versions">;
 
 export type ResumeTemplateRow = Tables<"resume_templates">;
+export type TemplateFavoriteRow = Tables<"template_favorites">;
+export type TemplateFavoriteInsert = TablesInsert<"template_favorites">;
+
 export type ExportRow = Tables<"exports">;
 export type ExportInsert = TablesInsert<"exports">;
 export type SubscriptionRow = Tables<"subscriptions">;

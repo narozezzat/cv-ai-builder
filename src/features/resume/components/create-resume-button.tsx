@@ -12,6 +12,11 @@ import { createResumeAction } from "../actions/resume-actions";
 interface CreateResumeButtonProps {
   /** Files the new resume into the folder the user is currently viewing. */
   folderId?: string | null;
+  /**
+   * Starts the resume on a specific template — this is what "Use this template" in the
+   * gallery does. Omitted everywhere else, so the action applies the default.
+   */
+  templateId?: string;
   label?: string;
   variant?: "brand" | "outline" | "secondary";
   size?: "default" | "sm";
@@ -28,6 +33,7 @@ interface CreateResumeButtonProps {
  */
 export function CreateResumeButton({
   folderId = null,
+  templateId,
   label = "New resume",
   variant = "brand",
   size = "default",
@@ -47,7 +53,9 @@ export function CreateResumeButton({
     setSubmitted(true);
 
     startTransition(async () => {
-      const result = await createResumeAction({ folderId });
+      // `templateId` is omitted rather than sent as `undefined`-shaped noise so the
+      // schema's `.default()` is what fills it in.
+      const result = await createResumeAction(templateId ? { folderId, templateId } : { folderId });
 
       if (isActionFailure(result)) {
         toast.error(result.error);
