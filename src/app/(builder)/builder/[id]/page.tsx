@@ -15,6 +15,18 @@ export const metadata: Metadata = {
 };
 
 /**
+ * The export action is invoked from this route, so it runs inside this route's function —
+ * and it launches Chromium, loads `/print/[token]`, waits on webfonts, and uploads the
+ * result. The platform default of 10 or 15 seconds kills that mid-render on a cold start,
+ * which the user experiences as "downloads never work the first time".
+ *
+ * A ceiling, not a target: nothing here waits 60 seconds on purpose, and the renderer sets
+ * its own shorter timeouts so a hung page fails as a `failed` export row rather than a
+ * function that runs to the wall.
+ */
+export const maxDuration = 60;
+
+/**
  * The three failure modes are three different screens, deliberately.
  *
  * `not-found` covers both "no such resume" and "not yours" — RLS makes them

@@ -35,6 +35,14 @@ const serverEnvSchema = z.object({
     .optional(),
 
   /**
+   * Explicit path to a Chromium binary, overriding both auto-detection branches in
+   * `services/render/chromium.ts`. Needed on hosts that ship their own browser (Docker
+   * images, Nix, CI runners with a system Chrome) where neither the bundled serverless
+   * build nor Puppeteer's download cache applies.
+   */
+  CHROMIUM_EXECUTABLE_PATH: z.string().min(1).optional(),
+
+  /**
    * Google is the default because it is the only one of the three with a real
    * free tier, which is what the project needs for development and for users who
    * never upgrade. `.env.example` ships `google`; keep the two in step — a value
@@ -95,6 +103,19 @@ export function isAiConfigured(): boolean {
  */
 export function isServiceRoleConfigured(): boolean {
   return Boolean(serverEnv.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+/**
+ * True when a resume can actually be exported.
+ *
+ * Export needs both halves and degrades on neither: without `EXPORT_TOKEN_SECRET` the
+ * print route cannot be authorized, and without the service-role key the render output
+ * cannot be written to the private `exports` bucket. Checked by the export action before
+ * anything is charged or launched, so a misconfigured deployment answers with a sentence
+ * instead of a Chromium crash.
+ */
+export function isExportConfigured(): boolean {
+  return Boolean(serverEnv.EXPORT_TOKEN_SECRET) && isServiceRoleConfigured();
 }
 
 /**
