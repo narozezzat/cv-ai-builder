@@ -10,13 +10,14 @@
  * together.
  */
 
-import { ArrowLeft, History, Redo2, Save, Undo2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, History, Redo2, Save, Target, Undo2 } from "lucide-react";
+import { useCallback, useState } from "react";
 
 import { ButtonLink, IconButton } from "@/components/shared";
 import { useRegisterCommands } from "@/components/providers/command-palette-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { JobMatchDialog } from "@/features/jobmatch";
 import { useShortcutLabel, useShortcuts } from "@/hooks/use-shortcuts";
 import { routes } from "@/lib/routes";
 
@@ -25,6 +26,7 @@ import { RESUME_TITLE_MAX } from "../../schema/resume-schema";
 import {
   selectCanRedo,
   selectCanUndo,
+  selectDocument,
   selectIsDirty,
   useResumeStore,
 } from "../../store/resume-store";
@@ -43,10 +45,19 @@ export function EditorHeader() {
   const canRedo = useResumeStore(selectCanRedo);
   const isDirty = useResumeStore(selectIsDirty);
   const status = useResumeStore((state) => state.status);
+  const resumeId = useResumeStore((state) => state.resumeId);
 
   const { save } = useSaveResume();
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [matchOpen, setMatchOpen] = useState(false);
+
+  /*
+    Read on demand, not subscribed. Subscribing here would re-render the whole header —
+    title input included — on every keystroke anywhere in the editor, to serve a dialog
+    that reads the document twice per sitting.
+  */
+  const getDocument = useCallback(() => selectDocument(useResumeStore.getState()), []);
 
   const undoLabel = useShortcutLabel(UNDO_COMBO);
   const redoLabel = useShortcutLabel(REDO_COMBO);
@@ -121,6 +132,14 @@ export function EditorHeader() {
       icon: <History aria-hidden />,
       perform: () => setHistoryOpen(true),
     },
+    {
+      id: "resume.jobmatch",
+      label: "Match to a job",
+      group: "context",
+      keywords: ["job description", "jd", "ats", "score", "keywords"],
+      icon: <Target aria-hidden />,
+      perform: () => setMatchOpen(true),
+    },
   ]);
 
   return (
@@ -166,6 +185,12 @@ export function EditorHeader() {
             onClick={redo}
           />
           <IconButton
+            label="Match to a job"
+            icon={<Target aria-hidden className="size-4" />}
+            size="icon-sm"
+            onClick={() => setMatchOpen(true)}
+          />
+          <IconButton
             label="Version history"
             icon={<History aria-hidden className="size-4" />}
             size="icon-sm"
@@ -192,6 +217,13 @@ export function EditorHeader() {
         shrink rules the moment it renders anything inline.
       */}
       <VersionHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
+
+      <JobMatchDialog
+        open={matchOpen}
+        onOpenChange={setMatchOpen}
+        resumeId={resumeId}
+        getDocument={getDocument}
+      />
     </header>
   );
 }
