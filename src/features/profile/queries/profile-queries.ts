@@ -1,7 +1,8 @@
 /**
- * Reads for the account surface: the profile row, the activity feed, dashboard stats.
+ * Reads for the account surface: the profile row, the activity feed, dashboard stats,
+ * the AI usage ledger.
  *
- * All three go through the cookie-bound client, so RLS is what scopes them — none
+ * All of them go through the cookie-bound client, so RLS is what scopes them — none
  * of these queries carries a `user_id` filter of its own except where it makes the
  * intent legible. That is deliberate: a filter in TypeScript is a convenience, and
  * relying on it would mean a forgotten `.eq()` becomes a data leak. `auth.uid()`
@@ -14,7 +15,15 @@ import { cache } from "react";
 import { z } from "zod";
 
 import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
-import type { ActivityLogRow, DashboardStats, ProfileRow } from "@/types/db";
+import {
+  AI_USAGE_LEDGER_COLUMNS,
+  type ActivityLogRow,
+  type AiUsageEntry,
+  type DashboardStats,
+  type ProfileRow,
+} from "@/types/db";
+
+import { startOfMonthIso } from "../lib/ai-usage";
 
 /** Explicit rather than `*`: adding a column should not silently widen a payload. */
 const PROFILE_COLUMNS =
@@ -77,6 +86,39 @@ export async function getRecentActivity(limit = 8): Promise<ActivityLogRow[]> {
   }
 
   return data ?? [];
+}
+
+/**
+ * Ledger rows for the current calendar month, newest first.
+ *
+ * Bounded twice over. `since` keeps the scan on the `(user_id, created_at desc)`
+ * index, and `limit` is a backstop: every row charges at least one credit and guard
+ * rejections never write a row, so a month cannot realistically produce more than
+ * the allowance. `truncated` exists so a month that somehow exceeds the cap says so
+ * in the UI rather than quietly reporting a total that is too low.
+ */
+export async function getMonthlyAiUsage(
+  now: Date,
+  limit = 200,
+): Promise<{ rows: AiUsageEntry[]; truncated: boolean }> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("ai_usage")
+    .select(AI_USAGE_LEDGER_COLUMNS)
+    .gte("created_at", startOfMonthIso(now))
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[profile] ai usage load failed", { code: error.code, message: error.message });
+
+    return { rows: [], truncated: false };
+  }
+
+  const rows = data ?? [];
+
+  return { rows, truncated: rows.length === limit };
 }
 
 /**

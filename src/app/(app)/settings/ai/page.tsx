@@ -1,10 +1,12 @@
 import { SparklesIcon } from "lucide-react";
 import type { Metadata } from "next";
 
-import { SectionCard } from "@/components/shared";
+import { AsyncBoundary, SectionCard } from "@/components/shared";
 import {
-  AiCreditsCard,
   AiPreferencesForm,
+  AiPrivacyNotice,
+  AiUsageSection,
+  AiUsageSkeleton,
   getProfile,
   parseAiPreferences,
 } from "@/features/profile";
@@ -28,7 +30,17 @@ export default async function AiSettingsPage() {
         <AiPreferencesForm defaultValues={parseAiPreferences(profile?.ai_preferences)} />
       </SectionCard>
 
-      <AiCreditsCard credits={profile?.ai_credits ?? null} />
+      {/*
+        Streamed separately: the ledger is a second query and the preferences form is
+        the reason people open this page. A slow month of history should not hold the
+        form back, and a failed read should degrade to a message in place of the
+        ledger rather than taking the settings route to its error boundary.
+      */}
+      <AsyncBoundary pending={<AiUsageSkeleton />}>
+        <AiUsageSection />
+      </AsyncBoundary>
+
+      <AiPrivacyNotice />
     </>
   );
 }
