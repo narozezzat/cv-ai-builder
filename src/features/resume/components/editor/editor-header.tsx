@@ -10,7 +10,7 @@
  * together.
  */
 
-import { ArrowLeft, History, Redo2, Save, Target, Undo2 } from "lucide-react";
+import { ArrowLeft, History, Palette, Redo2, Save, Target, Undo2 } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { ButtonLink, IconButton } from "@/components/shared";
@@ -30,6 +30,7 @@ import {
   selectIsDirty,
   useResumeStore,
 } from "../../store/resume-store";
+import { DesignDialog } from "./design-dialog";
 import { SaveStatusIndicator } from "./save-status";
 import { VersionHistoryDialog } from "./version-history-dialog";
 
@@ -51,6 +52,7 @@ export function EditorHeader() {
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
+  const [designOpen, setDesignOpen] = useState(false);
 
   /*
     Read on demand, not subscribed. Subscribing here would re-render the whole header —
@@ -125,6 +127,14 @@ export function EditorHeader() {
       perform: redo,
     },
     {
+      id: "resume.design",
+      label: "Change design",
+      group: "context",
+      keywords: ["template", "theme", "colour", "color", "font", "typography", "margin", "page"],
+      icon: <Palette aria-hidden />,
+      perform: () => setDesignOpen(true),
+    },
+    {
       id: "resume.history",
       label: "Version history",
       group: "context",
@@ -185,6 +195,12 @@ export function EditorHeader() {
             onClick={redo}
           />
           <IconButton
+            label="Change design"
+            icon={<Palette aria-hidden className="size-4" />}
+            size="icon-sm"
+            onClick={() => setDesignOpen(true)}
+          />
+          <IconButton
             label="Match to a job"
             icon={<Target aria-hidden className="size-4" />}
             size="icon-sm"
@@ -216,6 +232,8 @@ export function EditorHeader() {
         button row — a dialog inside a flex row of controls inherits its gap and
         shrink rules the moment it renders anything inline.
       */}
+      <DesignDialog open={designOpen} onOpenChange={setDesignOpen} />
+
       <VersionHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
 
       <JobMatchDialog
