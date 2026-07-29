@@ -10,13 +10,14 @@
  * together.
  */
 
-import { ArrowLeft, History, Palette, Redo2, Save, Target, Undo2 } from "lucide-react";
+import { ArrowLeft, Download, History, Palette, Redo2, Save, Target, Undo2 } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { ButtonLink, IconButton } from "@/components/shared";
 import { useRegisterCommands } from "@/components/providers/command-palette-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ExportDialog } from "@/features/export";
 import { JobMatchDialog } from "@/features/jobmatch";
 import { useShortcutLabel, useShortcuts } from "@/hooks/use-shortcuts";
 import { routes } from "@/lib/routes";
@@ -53,6 +54,7 @@ export function EditorHeader() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
   const [designOpen, setDesignOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   /*
     Read on demand, not subscribed. Subscribing here would re-render the whole header —
@@ -66,16 +68,27 @@ export function EditorHeader() {
 
   const canSave = isDirty && !saving && status !== "conflict";
 
-  async function handleSave(): Promise<void> {
+  /**
+   * Writes now and reports whether it landed.
+   *
+   * The boolean matters to the export dialog and to nothing else: a download renders the
+   * *stored* row, so it has to know that the flush it asked for actually happened before
+   * it launches a browser against yesterday's copy.
+   */
+  const flush = useCallback(async (): Promise<boolean> => {
     setSaving(true);
 
     try {
       // `"manual"` so the snapshot this leaves behind is never throttled: pressing Save
       // is the user asking for a point they can come back to.
-      await save("manual");
+      return await save("manual");
     } finally {
       setSaving(false);
     }
+  }, [save]);
+
+  async function handleSave(): Promise<void> {
+    await flush();
   }
 
   /*
@@ -141,6 +154,14 @@ export function EditorHeader() {
       keywords: ["versions", "restore", "revert"],
       icon: <History aria-hidden />,
       perform: () => setHistoryOpen(true),
+    },
+    {
+      id: "resume.export",
+      label: "Download resume",
+      group: "context",
+      keywords: ["pdf", "png", "jpeg", "download", "export", "print", "save as"],
+      icon: <Download aria-hidden />,
+      perform: () => setExportOpen(true),
     },
     {
       id: "resume.jobmatch",
@@ -212,6 +233,12 @@ export function EditorHeader() {
             size="icon-sm"
             onClick={() => setHistoryOpen(true)}
           />
+          <IconButton
+            label="Download"
+            icon={<Download aria-hidden className="size-4" />}
+            size="icon-sm"
+            onClick={() => setExportOpen(true)}
+          />
         </div>
 
         <Button
@@ -241,6 +268,14 @@ export function EditorHeader() {
         onOpenChange={setMatchOpen}
         resumeId={resumeId}
         getDocument={getDocument}
+      />
+
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        resumeId={resumeId}
+        dirty={isDirty}
+        onFlush={flush}
       />
     </header>
   );
