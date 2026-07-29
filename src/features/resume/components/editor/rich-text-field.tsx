@@ -12,7 +12,7 @@
  */
 
 import dynamic from "next/dynamic";
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -38,6 +38,8 @@ interface RichTextFieldProps {
   maxLength: number;
   placeholder?: string;
   hint?: string;
+  /** Rendered beside the label — the AI suggestion trigger for this field. */
+  action?: ReactNode;
   className?: string;
 }
 
@@ -48,6 +50,7 @@ export function RichTextField({
   maxLength,
   placeholder,
   hint,
+  action,
   className,
 }: RichTextFieldProps) {
   const id = useId();
@@ -64,7 +67,7 @@ export function RichTextField({
     remainingHtml <= 200 ? `Formatting included, about ${remainingHtml} characters left` : hint;
 
   return (
-    <FieldShell id={id} label={label} hint={shownHint} className={className}>
+    <FieldShell id={id} label={label} hint={shownHint} action={action} className={className}>
       <RichTextEditor
         id={id}
         value={value}
