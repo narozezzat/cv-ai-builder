@@ -12,7 +12,11 @@ export { ActivityFeed } from "./components/activity-feed";
 export { ActivityFeedSection, ActivityFeedSkeleton } from "./components/activity-feed-section";
 export { AiCreditsCard, FREE_MONTHLY_AI_CREDITS } from "./components/ai-credits-card";
 export { AiCreditsSection, AiCreditsSkeleton } from "./components/ai-credits-section";
+export { AiAvailabilityNotice } from "./components/ai-availability-notice";
 export { AiPreferencesForm } from "./components/ai-preferences-form";
+export { AiPrivacyNotice } from "./components/ai-privacy-notice";
+export { AiUsageLedger } from "./components/ai-usage-ledger";
+export { AiUsageSection, AiUsageSkeleton } from "./components/ai-usage-section";
 export { AppearanceForm } from "./components/appearance-form";
 export { AvatarUploader } from "./components/avatar-uploader";
 export { DashboardGreeting, DashboardGreetingSkeleton } from "./components/dashboard-greeting";
@@ -21,7 +25,16 @@ export { ThemeSync } from "./components/theme-sync";
 export { UserAvatar } from "./components/user-avatar";
 export { UserMenu } from "./components/user-menu";
 
-export { getDashboardStats, getProfile, getRecentActivity } from "./queries/profile-queries";
+export { capabilityLabel, failureLabel, summarizeAiUsage } from "./lib/ai-usage";
+
+export type { AiUsageSummary } from "./lib/ai-usage";
+
+export {
+  getDashboardStats,
+  getMonthlyAiUsage,
+  getProfile,
+  getRecentActivity,
+} from "./queries/profile-queries";
 
 export { parseAiPreferences, parseAppearance } from "./schema/profile-schema";
 

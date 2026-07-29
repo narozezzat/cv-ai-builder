@@ -125,6 +125,34 @@ export type ResumeSummary = Pick<
 >;
 
 /**
+ * The columns a ledger row is rendered from.
+ *
+ * `user_id` and `resume_id` are left out on purpose: the ledger is already scoped to
+ * the caller by RLS, and neither id is shown. Kept here rather than beside the query
+ * because the row shape is read by presentational components — the same
+ * client-boundary argument as `FolderSummary` below.
+ */
+export const AI_USAGE_LEDGER_COLUMNS =
+  "id, capability, provider, model, credits_charged, prompt_tokens, completion_tokens, total_tokens, cost_usd, latency_ms, success, error_code, created_at" as const;
+
+export type AiUsageEntry = Pick<
+  AiUsageRow,
+  | "id"
+  | "capability"
+  | "provider"
+  | "model"
+  | "credits_charged"
+  | "prompt_tokens"
+  | "completion_tokens"
+  | "total_tokens"
+  | "cost_usd"
+  | "latency_ms"
+  | "success"
+  | "error_code"
+  | "created_at"
+>;
+
+/**
  * A folder plus the number of active resumes filed in it.
  *
  * Lives here rather than beside the query that builds it because the sidebar and
