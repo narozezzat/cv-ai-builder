@@ -25,7 +25,7 @@ import { actionError, actionSuccess, type ActionResult } from "@/components/shar
 import { getRequestContext, rateLimitSubject } from "@/lib/request";
 import { routes } from "@/lib/routes";
 import { absoluteUrl } from "@/lib/site";
-import { enforceRateLimit, RATE_LIMITED_MESSAGE } from "@/services/rate-limit";
+import { enforceRateLimit, rateLimitMessage } from "@/services/rate-limit";
 import { logActivity } from "@/services/supabase/admin";
 import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
 
@@ -74,13 +74,13 @@ export async function changePasswordAction(input: ChangePasswordInput): Promise<
     return actionError("This account signs in with a social provider.");
   }
 
-  const { allowed } = await enforceRateLimit(
+  const limit = await enforceRateLimit(
     AUTH_RATE_LIMITS.passwordChange,
     rateLimitSubject("auth.password_change:user", user.id),
   );
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   if (!(await verifyPassword(user.email, parsed.data.currentPassword))) {
@@ -136,13 +136,13 @@ export async function changeEmailAction(input: ChangeEmailInput): Promise<Action
     return actionError("This account signs in with a social provider.");
   }
 
-  const { allowed } = await enforceRateLimit(
+  const limit = await enforceRateLimit(
     AUTH_RATE_LIMITS.emailChange,
     rateLimitSubject("auth.email_change:user", user.id),
   );
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   if (parsed.data.email === user.email.toLowerCase()) {

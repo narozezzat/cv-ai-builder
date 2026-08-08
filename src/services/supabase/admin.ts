@@ -177,19 +177,33 @@ export type RateLimitRule = {
 };
 
 /**
+ * The three answers a limit check can give.
+ *
+ * `unavailable` is distinct from `limited` even though both deny the request,
+ * because only one of them is the caller's doing. Collapsing them into a boolean
+ * makes a database outage indistinguishable from normal throttling, and every
+ * surface then tells the user to wait a few minutes for a problem waiting cannot
+ * solve.
+ */
+export type RateLimitVerdict = "allowed" | "limited" | "unavailable";
+
+/**
  * Consumes one unit of a subject's allowance.
  *
- * Returns false when the limit is already reached, so callers branch rather than
- * catch. `subject` must be derived server-side — a verified user id, or a hashed
- * IP for unauthenticated actions. Passing anything client-supplied here would let
- * a caller burn another user's quota, which is why the underlying function is
+ * Returns a verdict rather than throwing, so callers branch rather than catch.
+ * `subject` must be derived server-side — a verified user id, or a hashed IP for
+ * unauthenticated actions. Passing anything client-supplied here would let a
+ * caller burn another user's quota, which is why the underlying function is
  * granted to `service_role` only.
  *
- * Fails closed. If the check itself errors the answer is "denied": a rate limiter
- * that opens under database trouble is a rate limiter that is absent exactly when
- * something is going wrong.
+ * Fails closed. If the check itself errors the request is still denied — a rate
+ * limiter that opens under database trouble is a rate limiter that is absent
+ * exactly when something is going wrong — but it is denied as `unavailable`.
  */
-export async function consumeRateLimit(subject: string, rule: RateLimitRule): Promise<boolean> {
+export async function consumeRateLimit(
+  subject: string,
+  rule: RateLimitRule,
+): Promise<RateLimitVerdict> {
   try {
     const { data, error } = await getSupabaseAdminClient().rpc("check_rate_limit", {
       p_subject: subject,
@@ -204,12 +218,12 @@ export async function consumeRateLimit(subject: string, rule: RateLimitRule): Pr
         code: error.code,
         message: error.message,
       });
-      return false;
+      return "unavailable";
     }
 
-    return data === true;
+    return data === true ? "allowed" : "limited";
   } catch (cause) {
     console.error("[rate-limit] check threw, denying", cause);
-    return false;
+    return "unavailable";
   }
 }

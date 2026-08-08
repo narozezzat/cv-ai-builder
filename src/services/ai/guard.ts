@@ -47,10 +47,14 @@ export async function guardAiRequest(capability: AiCapability): Promise<AiGuardR
   // Every rule, always, keyed to the user rather than the capability — see the
   // comment on AI_RATE_LIMITS for why per-capability buckets are no bucket at all.
   for (const rule of AI_RATE_LIMIT_RULES) {
-    const { allowed } = await enforceRateLimit(rule, rateLimitSubject("ai-user", user.id));
+    const limit = await enforceRateLimit(rule, rateLimitSubject("ai-user", user.id));
 
-    if (!allowed) {
-      throw new AiError("rate_limited");
+    if (!limit.allowed) {
+      // A limiter that cannot reach its database denies too, but the caller is not
+      // over anything — telling them they made too many requests is a lie, and
+      // `rate_limited` is not retryable so the UI would hide the retry button on
+      // the one failure retrying actually fixes.
+      throw new AiError(limit.reason === "limited" ? "rate_limited" : "provider_unavailable");
     }
   }
 

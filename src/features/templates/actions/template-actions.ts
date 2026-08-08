@@ -22,7 +22,7 @@ import { revalidatePath } from "next/cache";
 import { actionError, actionSuccess, type ActionResult } from "@/components/shared/form";
 import { rateLimitSubject } from "@/lib/request";
 import { routes } from "@/lib/routes";
-import { enforceRateLimit, RATE_LIMITED_MESSAGE } from "@/services/rate-limit";
+import { enforceRateLimit, rateLimitMessage } from "@/services/rate-limit";
 import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
 
 import { TEMPLATE_RATE_LIMITS } from "../lib/rate-limits";
@@ -41,13 +41,10 @@ export async function toggleTemplateFavoriteAction(input: unknown): Promise<Acti
   const { templateId, isFavorite } = parsed.data;
   const user = await requireUser();
   const rule = TEMPLATE_RATE_LIMITS.favorite;
-  const { allowed } = await enforceRateLimit(
-    rule,
-    rateLimitSubject(`${rule.action}:user`, user.id),
-  );
+  const limit = await enforceRateLimit(rule, rateLimitSubject(`${rule.action}:user`, user.id));
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();

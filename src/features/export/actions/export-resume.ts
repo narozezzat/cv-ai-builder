@@ -35,7 +35,7 @@ import { revalidatePath } from "next/cache";
 import { getRequestContext, rateLimitSubject } from "@/lib/request";
 import { routes } from "@/lib/routes";
 import { isExportConfigured } from "@/lib/env/server";
-import { enforceRateLimit, RATE_LIMITED_MESSAGE } from "@/services/rate-limit";
+import { enforceRateLimit, rateLimitMessage } from "@/services/rate-limit";
 import { renderResume } from "@/services/render/chromium";
 import { getSupabaseAdminClient, logActivity } from "@/services/supabase/admin";
 import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
@@ -101,13 +101,13 @@ export async function exportResume(input: ExportResumeInput): Promise<ExportResu
     return { ok: false, error: UNAVAILABLE };
   }
 
-  const { allowed } = await enforceRateLimit(
+  const limit = await enforceRateLimit(
     EXPORT_RATE_LIMITS.render,
     rateLimitSubject(`${EXPORT_RATE_LIMITS.render.action}:user`, user.id),
   );
 
-  if (!allowed) {
-    return { ok: false, error: RATE_LIMITED_MESSAGE };
+  if (!limit.allowed) {
+    return { ok: false, error: rateLimitMessage(limit.reason) };
   }
 
   const supabase = await createSupabaseServerClient();
