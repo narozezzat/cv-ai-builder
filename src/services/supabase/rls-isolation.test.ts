@@ -148,8 +148,13 @@ describe.skipIf(!configured)("RLS isolation between accounts", () => {
   it("refuses an anonymous read", async () => {
     const { data, error } = await anonClient().from("resumes").select("id");
 
-    expect(error).toBeNull();
-    expect(data).toEqual([]);
+    // Refused a layer earlier than RLS: the grants migration gives `anon` no
+    // privilege on this table, so the policies never even run. A share link
+    // reaches a resume through `get_public_resume()`, which is SECURITY DEFINER
+    // and returns one published row — that is the only anonymous path in, and
+    // it is why taking the table grant away costs nothing.
+    expect(error?.code).toBe("42501");
+    expect(data).toBeNull();
   });
 
   it("does not let another user update the row", async () => {
