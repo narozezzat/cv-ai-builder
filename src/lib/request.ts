@@ -26,8 +26,9 @@ export type RequestContext = {
  * `x-forwarded-for` is a comma-separated chain and only the first entry is the
  * original client; the rest are proxies. It is spoofable in general — anyone can
  * send the header — but Vercel overwrites it at the edge, so on the deployment
- * target it is trustworthy. Locally it is usually absent, which is why every
- * consumer has to handle null rather than assume a value.
+ * target it is trustworthy. `next start` populates it too, so a local run does get
+ * a value; what has no value is a request that arrives without the header at all,
+ * which is why every consumer handles null rather than assuming one.
  */
 export async function getRequestContext(): Promise<RequestContext> {
   const headerList = await headers();

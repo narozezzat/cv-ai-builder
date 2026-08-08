@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
 
 /**
@@ -48,6 +49,15 @@ export function isActionFailure(result: ActionResult | void): result is ActionFa
  * deploy mid-submit, a browser offline. Distinct from anything the action itself
  * reports, because the request may well have succeeded server-side.
  *
+ * It is *not* shown for a redirect. `redirect()` interrupts a Server Action by
+ * throwing, and that rejection reaches the caller here too, so a blanket `catch`
+ * reports every successful redirecting submit as a failure. Where the redirect
+ * lands on a different route the replaced page hides it; where it lands on the
+ * same route — `/forgot-password?sent=1`, `/verify-email?sent=1` — the form stays
+ * mounted and the user sees this message directly beside the success banner.
+ * `unstable_rethrow` in `runAction` is the guard, and the test beside this file
+ * pins it.
+ *
  * Deliberately not imported from the auth feature's error mapper: that module
  * pulls in `@supabase/supabase-js`, and this string is consumed by client
  * components.
@@ -76,7 +86,8 @@ export function applyActionResult<TFieldValues extends FieldValues>(
  * rather than flicker back to idle on a page that is being replaced.
  *
  * `onSuccess` fires only for an explicit `{ ok: true }`. A redirecting action
- * resolves with nothing and takes neither branch.
+ * never resolves at all — it rejects with the router's `NEXT_REDIRECT` signal,
+ * which the `catch` below hands straight back to the framework.
  */
 export async function runAction<TFieldValues extends FieldValues>(
   form: UseFormReturn<TFieldValues>,
@@ -96,7 +107,13 @@ export async function runAction<TFieldValues extends FieldValues>(
     if (result?.ok) {
       onSuccess?.(result);
     }
-  } catch {
+  } catch (error) {
+    // A redirecting action rejects rather than resolves, so this `catch` sees the
+    // framework's own control-flow signal on the *success* path. Rethrowing it
+    // first is what keeps a successful submit from being reported as a failure —
+    // see the note on `TRANSPORT_ERROR`.
+    unstable_rethrow(error);
+
     form.setError("root", { message: TRANSPORT_ERROR });
   }
 }

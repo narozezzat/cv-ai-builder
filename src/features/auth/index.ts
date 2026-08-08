@@ -28,4 +28,12 @@ export { signOutAction } from "./actions/auth-actions";
 
 export { configuredOAuthProviders } from "./lib/providers";
 
+/**
+ * The recovery flow's two halves, both needed outside the feature: `/auth/callback`
+ * decides where a mail link lands, and `/reset-password` decides whether the session
+ * it arrived with may set a password.
+ */
+export { callbackTargets, otpType } from "./lib/recovery-flow";
+export { getRecoveryPrincipal } from "./lib/recovery-session";
+
 export type { OAuthProvider } from "./schema/auth-schema";

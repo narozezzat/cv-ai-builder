@@ -45,8 +45,17 @@ export const routes = {
  */
 export const PROTECTED_PREFIXES = ["/dashboard", "/builder", "/settings"] as const;
 
-/** Auth screens a signed-in user should be bounced away from. */
-export const AUTH_ROUTES = [routes.login, routes.signup, routes.forgotPassword] as const;
+/**
+ * Auth screens a signed-in user should be bounced away from.
+ *
+ * `/forgot-password` is deliberately absent. A session does not make that screen
+ * pointless the way it does sign-in and sign-up: `/reset-password` renders a "this
+ * link is no longer valid" card whose only real CTA points there, and it renders it
+ * to a visitor who *has* a session — a recovery one past its authority window. Once
+ * middleware bounced them, the one person who needed a new link could not ask for
+ * one. It is still barred as a post-auth *destination*; see `NON_DESTINATIONS`.
+ */
+export const AUTH_ROUTES = [routes.login, routes.signup] as const;
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
@@ -71,6 +80,7 @@ const RESOLUTION_ORIGIN = "http://redirect.invalid";
  */
 const NON_DESTINATIONS: readonly string[] = [
   ...AUTH_ROUTES,
+  routes.forgotPassword,
   routes.resetPassword,
   routes.verifyEmail,
   routes.authCallback,

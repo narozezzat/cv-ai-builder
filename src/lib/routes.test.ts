@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isProtectedPath, routes, safeRedirectPath } from "@/lib/routes";
+import { AUTH_ROUTES, isProtectedPath, routes, safeRedirectPath } from "@/lib/routes";
 
 /**
  * `isProtectedPath` is the input to `middleware.ts`, so a hole here is an
@@ -34,6 +34,30 @@ describe("isProtectedPath", () => {
     expect(isProtectedPath(routes.signup)).toBe(false);
     expect(isProtectedPath("/r/some-share-slug")).toBe(false);
     expect(isProtectedPath("/print/token")).toBe(false);
+  });
+});
+
+/**
+ * The list middleware bounces signed-in visitors away from. Being on it and being
+ * an unsuitable post-auth destination are different properties, and conflating them
+ * cost a working flow: `/reset-password` shows a "this link is no longer valid" card
+ * whose only real CTA is `/forgot-password`, and it shows it to someone who *does*
+ * have a session — an expired recovery one. Bouncing that visitor to the dashboard
+ * stranded exactly the person who needed a new link.
+ */
+describe("AUTH_ROUTES", () => {
+  it("covers the screens a session makes pointless, and only those", () => {
+    expect([...AUTH_ROUTES]).toStrictEqual([routes.login, routes.signup]);
+  });
+
+  it("leaves /forgot-password reachable with a session", () => {
+    expect(AUTH_ROUTES as readonly string[]).not.toContain(routes.forgotPassword);
+  });
+
+  it("still refuses /forgot-password as a post-auth destination", () => {
+    // Reachable on purpose, but landing there straight after signing in is the
+    // stranding case `NON_DESTINATIONS` exists for.
+    expect(safeRedirectPath(routes.forgotPassword)).toBe(routes.dashboard);
   });
 });
 

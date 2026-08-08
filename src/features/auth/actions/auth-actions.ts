@@ -27,14 +27,15 @@ import { redirect } from "next/navigation";
 import { actionError, type ActionFailure } from "@/components/shared/form";
 import { isOAuthConfigured } from "@/lib/env/server";
 import { getRequestContext, rateLimitSubject } from "@/lib/request";
-import { NEXT_PARAM, routes, safeRedirectPath } from "@/lib/routes";
-import { absoluteUrl } from "@/lib/site";
+import { routes, safeRedirectPath } from "@/lib/routes";
 import { enforceRateLimit, rateLimitMessage, type RateLimitResult } from "@/services/rate-limit";
 import { logActivity } from "@/services/supabase/admin";
 import { createSupabaseServerClient, getCurrentUser } from "@/services/supabase/server";
 
 import { authErrorMessage, GENERIC_AUTH_ERROR } from "../lib/auth-errors";
 import { AUTH_RATE_LIMITS } from "../lib/rate-limits";
+import { emailRedirectTo, RECOVERY_FLOW } from "../lib/recovery-flow";
+import { getRecoveryPrincipal } from "../lib/recovery-session";
 import {
   forgotPasswordSchema,
   oauthProviderSchema,
@@ -49,20 +50,6 @@ import {
   type SignInInput,
   type SignUpInput,
 } from "../schema/auth-schema";
-
-/**
- * Where GoTrue sends the user after they click a link in an email.
- *
- * Always our own callback route, never a URL derived from input. `next` rides
- * along as a relative path and is re-validated when the callback reads it, so a
- * tampered confirmation link cannot turn into an off-site redirect carrying a
- * fresh session.
- */
-function emailRedirectTo(next: string): string {
-  const params = new URLSearchParams({ [NEXT_PARAM]: next });
-
-  return absoluteUrl(`${routes.authCallback}?${params.toString()}`);
-}
 
 /**
  * Rate-limit key for an unauthenticated attempt.
@@ -84,8 +71,8 @@ async function checkCredentialLimits(
     return byEmail;
   }
 
-  // Absent locally, where there is no proxy to set the header. Skipping the
-  // second bucket is fine there — the first one already applies.
+  // Null when the request carried no forwarded-for header at all. Skipping the
+  // second bucket is fine then — the first one already applies.
   if (!ip) {
     return byEmail;
   }
@@ -265,8 +252,11 @@ export async function signInWithOAuthAction(
  * SECURITY: always reports success, including for an address with no account.
  * "No user found with that email" is the same enumeration leak as a distinct
  * login error, and a forgot-password form is the easiest place to probe for it
- * since it needs no password guess. Provider errors are logged, not shown —
- * except rate limiting, which the user can act on.
+ * since it needs no password guess. Every provider error is logged and none is
+ * shown, GoTrue's send throttle included: it fires per address, so surfacing it
+ * would answer the same question the generic response exists to refuse. Our own
+ * per-email bucket above is different — it fills identically for an address with no
+ * account, so reporting it leaks nothing and tells the user why no mail arrived.
  */
 export async function requestPasswordResetAction(
   input: ForgotPasswordInput,
@@ -288,7 +278,11 @@ export async function requestPasswordResetAction(
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: emailRedirectTo(routes.resetPassword),
+    // The marker is what identifies the return hop as recovery. GoTrue's own
+    // `type=recovery` sits on the verify link and does not survive the redirect it
+    // issues, so without this the callback cannot tell this apart from a signup
+    // confirmation and lands the user on the dashboard instead of the reset form.
+    redirectTo: emailRedirectTo(routes.resetPassword, RECOVERY_FLOW),
   });
 
   if (error) {
@@ -304,11 +298,14 @@ export async function requestPasswordResetAction(
 /**
  * Sets a new password using the recovery session created by the callback route.
  *
- * The authorization here is the session itself: `updateUser` acts on whoever the
- * cookie says is signed in, and the only way to hold a recovery session is to
- * have opened a link sent to that address. `secure_password_change = true` in
- * `supabase/config.toml` is what makes GoTrue require that session rather than
- * accepting a bare token.
+ * SECURITY: the authority is a *recovery* session, not any session. This is the one
+ * action that changes a credential without checking the current one, so accepting
+ * whoever the cookie says is signed in would make a stolen session cookie enough to
+ * lock the real owner out — and it would route straight around
+ * `changePasswordAction`, which re-authenticates for exactly that reason. GoTrue's
+ * `secure_password_change` does not cover the gap: it demands reauthentication only
+ * once the session is more than 24 hours old, so a fresh sign-in passes it. See
+ * `getRecoveryPrincipal`, which reads the verified `amr` claim.
  */
 export async function resetPasswordAction(input: ResetPasswordInput): Promise<ActionFailure> {
   const parsed = resetPasswordSchema.safeParse(input);
@@ -317,12 +314,25 @@ export async function resetPasswordAction(input: ResetPasswordInput): Promise<Ac
     return actionError("Check the form and try again.");
   }
 
-  const user = await getCurrentUser();
+  const principal = await getRecoveryPrincipal();
 
-  if (!user) {
-    // The recovery link is single-use and time-limited, so an absent session here
-    // almost always means it expired between opening the mail and submitting.
+  if (!principal) {
+    // Either there is no session, or the one there was not minted by a recovery
+    // link within the link's lifetime. Both mean the same thing to the user, and
+    // saying which would tell an attacker holding a session what they are missing.
     return actionError("That link has expired. Request a new one.");
+  }
+
+  // A session alone must not buy unlimited password writes: the endpoint is
+  // reachable by anyone who can replay the cookie, and each call is a takeover
+  // attempt if the session was not theirs.
+  const limit = await enforceRateLimit(
+    AUTH_RATE_LIMITS.passwordResetConfirm,
+    rateLimitSubject(`${AUTH_RATE_LIMITS.passwordResetConfirm.action}:user`, principal.userId),
+  );
+
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -336,7 +346,7 @@ export async function resetPasswordAction(input: ResetPasswordInput): Promise<Ac
   const { ip, userAgent } = await getRequestContext();
 
   await logActivity({
-    userId: user.id,
+    userId: principal.userId,
     action: "auth.password_reset",
     ipAddress: ip,
     userAgent,
@@ -352,9 +362,17 @@ export async function resetPasswordAction(input: ResetPasswordInput): Promise<Ac
 /**
  * Re-sends the signup confirmation.
  *
- * Same enumeration rule as password reset: the answer does not depend on whether
- * the address exists or is already confirmed. GoTrue's `resend` is a no-op for a
- * confirmed user, which is the behaviour we want anyway.
+ * SECURITY: same enumeration rule as password reset, and the same implementation of
+ * it — every provider outcome is logged and none is shown. GoTrue's own send
+ * throttle is the reason that has to be absolute here rather than "everything
+ * except rate limiting": `resend` returns `over_email_send_rate_limit` only when
+ * there is an unconfirmed account to re-mail, and a plain success for an address it
+ * has never seen. Measured locally, that difference shows up on the *first* attempt,
+ * so our own per-email bucket does not mask it — forwarding the code told an
+ * attacker which addresses have accounts pending confirmation.
+ *
+ * `resend` being a no-op for an already-confirmed user is the behaviour we want
+ * anyway: nothing distinguishes it from a fresh signup that has not clicked through.
  */
 export async function resendVerificationAction(
   input: ResendVerificationInput,
@@ -382,12 +400,6 @@ export async function resendVerificationAction(
   });
 
   if (error) {
-    // Only the rate-limit codes say anything the user can act on; the rest would
-    // reveal account state.
-    if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit") {
-      return actionError(authErrorMessage(error));
-    }
-
     console.error("[auth] resend verification failed", { code: error.code, status: error.status });
   }
 
