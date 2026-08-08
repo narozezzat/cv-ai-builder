@@ -20,7 +20,7 @@ import { revalidatePath } from "next/cache";
 
 import { actionError, actionSuccess, type ActionResult } from "@/components/shared/form";
 import { getRequestContext, rateLimitSubject } from "@/lib/request";
-import { enforceRateLimit, RATE_LIMITED_MESSAGE } from "@/services/rate-limit";
+import { enforceRateLimit, rateLimitMessage } from "@/services/rate-limit";
 import { logActivity } from "@/services/supabase/admin";
 import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
 import type { ProfileUpdate } from "@/types/db";
@@ -103,10 +103,10 @@ export async function updateProfileAction(input: ProfileInfoInput): Promise<Acti
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceProfileLimit(user.id);
+  const limit = await enforceProfileLimit(user.id);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const failure = await writeProfile(user.id, {
@@ -153,10 +153,10 @@ export async function updateAppearanceAction(input: AppearanceInput): Promise<Ac
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceProfileLimit(user.id);
+  const limit = await enforceProfileLimit(user.id);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const failure = await writeProfile(user.id, {
@@ -195,10 +195,10 @@ export async function updateAiPreferencesAction(input: AiPreferences): Promise<A
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceProfileLimit(user.id);
+  const limit = await enforceProfileLimit(user.id);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   // Whole-object write, not a merge. The schema is complete — every field has a
@@ -286,10 +286,14 @@ export async function uploadAvatarAction(formData: FormData): Promise<ActionResu
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceProfileLimit(user.id, PROFILE_RATE_LIMITS.avatarUpload);
+  const limit = await enforceProfileLimit(user.id, PROFILE_RATE_LIMITS.avatarUpload);
 
-  if (!allowed) {
-    return actionError("Too many uploads. Try again later.");
+  if (!limit.allowed) {
+    return actionError(
+      limit.reason === "limited"
+        ? "Too many uploads. Try again later."
+        : rateLimitMessage("unavailable"),
+    );
   }
 
   const previous = await currentAvatarUrl(user.id);
@@ -345,10 +349,10 @@ export async function uploadAvatarAction(formData: FormData): Promise<ActionResu
 
 export async function removeAvatarAction(): Promise<ActionResult> {
   const user = await requireUser();
-  const { allowed } = await enforceProfileLimit(user.id);
+  const limit = await enforceProfileLimit(user.id);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const previous = await currentAvatarUrl(user.id);

@@ -29,7 +29,7 @@ import { isOAuthConfigured } from "@/lib/env/server";
 import { getRequestContext, rateLimitSubject } from "@/lib/request";
 import { NEXT_PARAM, routes, safeRedirectPath } from "@/lib/routes";
 import { absoluteUrl } from "@/lib/site";
-import { enforceRateLimit, RATE_LIMITED_MESSAGE } from "@/services/rate-limit";
+import { enforceRateLimit, rateLimitMessage, type RateLimitResult } from "@/services/rate-limit";
 import { logActivity } from "@/services/supabase/admin";
 import { createSupabaseServerClient, getCurrentUser } from "@/services/supabase/server";
 
@@ -75,24 +75,22 @@ function emailRedirectTo(next: string): string {
 async function checkCredentialLimits(
   rule: (typeof AUTH_RATE_LIMITS)[keyof typeof AUTH_RATE_LIMITS],
   email: string,
-): Promise<boolean> {
+): Promise<RateLimitResult> {
   const { ip } = await getRequestContext();
 
   const byEmail = await enforceRateLimit(rule, rateLimitSubject(`${rule.action}:email`, email));
 
   if (!byEmail.allowed) {
-    return false;
+    return byEmail;
   }
 
   // Absent locally, where there is no proxy to set the header. Skipping the
   // second bucket is fine there — the first one already applies.
   if (!ip) {
-    return true;
+    return byEmail;
   }
 
-  const byIp = await enforceRateLimit(rule, rateLimitSubject(`${rule.action}:ip`, ip));
-
-  return byIp.allowed;
+  return enforceRateLimit(rule, rateLimitSubject(`${rule.action}:ip`, ip));
 }
 
 // ── Sign up ───────────────────────────────────────────────────────────────────
@@ -116,8 +114,10 @@ export async function signUpAction(input: SignUpInput): Promise<ActionFailure> {
 
   const { email, password, fullName } = parsed.data;
 
-  if (!(await checkCredentialLimits(AUTH_RATE_LIMITS.signUp, email))) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  const limit = await checkCredentialLimits(AUTH_RATE_LIMITS.signUp, email);
+
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -163,8 +163,10 @@ export async function signInAction(
 
   const { email, password } = parsed.data;
 
-  if (!(await checkCredentialLimits(AUTH_RATE_LIMITS.signIn, email))) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  const limit = await checkCredentialLimits(AUTH_RATE_LIMITS.signIn, email);
+
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -226,13 +228,13 @@ export async function signInWithOAuthAction(
   const { ip } = await getRequestContext();
 
   if (ip) {
-    const { allowed } = await enforceRateLimit(
+    const limit = await enforceRateLimit(
       AUTH_RATE_LIMITS.oauthStart,
       rateLimitSubject("auth.oauth_start:ip", ip),
     );
 
-    if (!allowed) {
-      return actionError(RATE_LIMITED_MESSAGE);
+    if (!limit.allowed) {
+      return actionError(rateLimitMessage(limit.reason));
     }
   }
 
@@ -277,8 +279,10 @@ export async function requestPasswordResetAction(
 
   const { email } = parsed.data;
 
-  if (!(await checkCredentialLimits(AUTH_RATE_LIMITS.passwordReset, email))) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  const limit = await checkCredentialLimits(AUTH_RATE_LIMITS.passwordReset, email);
+
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -363,8 +367,10 @@ export async function resendVerificationAction(
 
   const { email } = parsed.data;
 
-  if (!(await checkCredentialLimits(AUTH_RATE_LIMITS.resendVerification, email))) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  const limit = await checkCredentialLimits(AUTH_RATE_LIMITS.resendVerification, email);
+
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();

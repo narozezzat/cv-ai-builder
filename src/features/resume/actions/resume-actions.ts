@@ -29,7 +29,7 @@ import { redirect } from "next/navigation";
 import { actionError, actionSuccess, type ActionResult } from "@/components/shared/form";
 import { getRequestContext, rateLimitSubject } from "@/lib/request";
 import { routes } from "@/lib/routes";
-import { enforceRateLimit, RATE_LIMITED_MESSAGE, type RateLimitRule } from "@/services/rate-limit";
+import { enforceRateLimit, rateLimitMessage, type RateLimitRule } from "@/services/rate-limit";
 import { logActivity } from "@/services/supabase/admin";
 import {
   createSupabaseServerClient,
@@ -174,10 +174,10 @@ export async function createResumeAction(input: CreateResumeInput): Promise<Acti
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.create);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.create);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -259,10 +259,10 @@ export async function duplicateResumeAction(input: unknown): Promise<ActionResul
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.create);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.create);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -327,10 +327,10 @@ export async function renameResumeAction(input: RenameResumeInput): Promise<Acti
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const failure = await patchResume(parsed.data.resumeId, { title: parsed.data.title });
@@ -358,10 +358,10 @@ export async function setResumeFavoriteAction(input: unknown): Promise<ActionRes
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const failure = await patchResume(parsed.data.resumeId, { is_favorite: parsed.data.isFavorite });
@@ -385,10 +385,10 @@ export async function setResumeTagsAction(input: unknown): Promise<ActionResult>
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const failure = await patchResume(parsed.data.resumeId, { tags: parsed.data.tags });
@@ -410,10 +410,10 @@ export async function moveResumeToFolderAction(input: unknown): Promise<ActionRe
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -464,10 +464,10 @@ export async function trashResumeAction(input: unknown): Promise<ActionResult> {
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const failure = await patchResume(parsed.data.resumeId, {
@@ -501,10 +501,10 @@ export async function restoreResumeAction(input: unknown): Promise<ActionResult>
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.mutate);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -600,10 +600,10 @@ export async function deleteResumeAction(input: unknown): Promise<ActionResult> 
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.delete);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.delete);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -658,10 +658,10 @@ export async function deleteResumeAction(input: unknown): Promise<ActionResult> 
 /** Empties the trash in one pass. Unrecoverable. */
 export async function emptyResumeTrashAction(): Promise<ActionResult> {
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.delete);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.delete);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -742,10 +742,10 @@ export async function saveResumeAction(input: SaveResumeInput): Promise<SaveResu
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.save);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.save);
 
-  if (!allowed) {
-    return { status: "error", message: RATE_LIMITED_MESSAGE };
+  if (!limit.allowed) {
+    return { status: "error", message: rateLimitMessage(limit.reason) };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1100,10 +1100,10 @@ export async function createResumeVersionAction(
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.version);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.version);
 
-  if (!allowed) {
-    return { status: "error", message: RATE_LIMITED_MESSAGE };
+  if (!limit.allowed) {
+    return { status: "error", message: rateLimitMessage(limit.reason) };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1184,10 +1184,10 @@ export async function restoreResumeVersionAction(
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.version);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.version);
 
-  if (!allowed) {
-    return { status: "error", message: RATE_LIMITED_MESSAGE };
+  if (!limit.allowed) {
+    return { status: "error", message: rateLimitMessage(limit.reason) };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1279,10 +1279,10 @@ export async function createFolderAction(input: unknown): Promise<ActionResult> 
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.folder);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.folder);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1313,10 +1313,10 @@ export async function renameFolderAction(input: unknown): Promise<ActionResult> 
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.folder);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.folder);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -1360,10 +1360,10 @@ export async function deleteFolderAction(input: unknown): Promise<ActionResult> 
   }
 
   const user = await requireUser();
-  const { allowed } = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.folder);
+  const limit = await enforceResumeLimit(user.id, RESUME_RATE_LIMITS.folder);
 
-  if (!allowed) {
-    return actionError(RATE_LIMITED_MESSAGE);
+  if (!limit.allowed) {
+    return actionError(rateLimitMessage(limit.reason));
   }
 
   const supabase = await createSupabaseServerClient();
