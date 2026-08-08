@@ -24,13 +24,13 @@ import { revalidatePath } from "next/cache";
 import { actionError, actionSuccess, type ActionResult } from "@/components/shared/form";
 import { getRequestContext, rateLimitSubject } from "@/lib/request";
 import { routes } from "@/lib/routes";
-import { absoluteUrl } from "@/lib/site";
 import { enforceRateLimit, rateLimitMessage } from "@/services/rate-limit";
 import { logActivity } from "@/services/supabase/admin";
 import { createSupabaseServerClient, requireUser } from "@/services/supabase/server";
 
 import { authErrorMessage } from "../lib/auth-errors";
 import { AUTH_RATE_LIMITS } from "../lib/rate-limits";
+import { emailRedirectTo } from "../lib/recovery-flow";
 import {
   changeEmailSchema,
   changePasswordSchema,
@@ -160,8 +160,10 @@ export async function changeEmailAction(input: ChangeEmailInput): Promise<Action
   const { error } = await supabase.auth.updateUser(
     { email: parsed.data.email },
     // Confirming either link lands on our callback, which exchanges the code and
-    // then sends the user back to the page they started from.
-    { emailRedirectTo: absoluteUrl(routes.authCallback) },
+    // then sends the user back to the page they started from — the `next` is what
+    // makes that true. Without it the callback falls through to its default and the
+    // user finishes an account-settings task on the dashboard.
+    { emailRedirectTo: emailRedirectTo(routes.settingsAccount) },
   );
 
   if (error) {

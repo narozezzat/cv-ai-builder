@@ -34,5 +34,12 @@ export const AUTH_RATE_LIMITS = {
    * what they need to lock the real owner out.
    */
   passwordChange: { action: "auth.password_change", window: "1 hour", max: 5 },
+  /**
+   * Submitting the reset form. Keyed per user rather than per email, because by
+   * then the address is not in the request — the recovery session is. Same reason
+   * as `passwordChange`: the endpoint takes no current password, so without a limit
+   * a replayed session cookie gets unlimited attempts at owning the account.
+   */
+  passwordResetConfirm: { action: "auth.password_reset_confirm", window: "1 hour", max: 5 },
   emailChange: { action: "auth.email_change", window: "1 hour", max: 5 },
 } satisfies Record<string, RateLimitRule>;

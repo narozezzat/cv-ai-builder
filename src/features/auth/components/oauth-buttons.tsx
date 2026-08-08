@@ -2,6 +2,7 @@
 
 import { useState, type ComponentType } from "react";
 import { Loader2 } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 
 import { GitHubIcon, GoogleIcon } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -51,18 +52,24 @@ export function OAuthButtons({
     setError(null);
 
     try {
-      // On success the action redirects, so this call never resolves with a value
-      // and `pending` stays set until the page unloads — which is the state we
-      // want, since the user is on their way to the provider.
+      // On success the action redirects to the provider, so this resolves with
+      // nothing and `pending` stays set until the page unloads — which is the state
+      // we want, since the user is on their way out.
       const result = await signInWithOAuthAction(provider, next);
 
       if (result?.error) {
         setError(result.error);
         setPending(null);
       }
-    } catch {
-      // A thrown error here is a transport failure, not a rejected sign-in: Next's
-      // redirect signal is handled by the router and never surfaces as a catch.
+    } catch (error) {
+      // Only a *cross-origin* redirect resolves like that. Next streams flight data
+      // for an app-relative one and rejects the action promise with `NEXT_REDIRECT`
+      // instead, so a blanket `catch` here would report the router's success signal
+      // as a failed sign-in the day this action redirects anywhere in-app — the bug
+      // `runAction` already shipped once. Hand framework signals back before
+      // deciding anything.
+      unstable_rethrow(error);
+
       setError("Could not reach the sign-in service. Check your connection.");
       setPending(null);
     }
